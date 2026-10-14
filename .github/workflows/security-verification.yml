@@ -1,0 +1,27 @@
+name: Cryptic security and proof gate
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  source-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect public tree for exposed secrets
+        run: node scripts/security-verify.mjs
+      - name: Exercise execution-bridge denial and replay checks
+        run: node --test tests/bridge-security.test.mjs
+      - name: Install dependencies without lifecycle scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Type-check application
+        run: npm run lint
+      - name: Build static application
+        run: npm run build
