@@ -4,21 +4,21 @@ import { Flame, Sparkles, Key, Compass, Wand2 } from 'lucide-react';
 
 export const GenieDjinnModule: React.FC = () => {
   const { mintToken, addLedger } = useCryptic();
-  const [wishIntent, setWishIntent] = useState('Synthesize sovereign low-latency corridor over wildfire zone');
+  const [wishIntent, setWishIntent] = useState('Record a bounded operational intent');
   const [worldSeed, setWorldSeed] = useState('137451921129154222');
   const [activeTab, setActiveTab] = useState<'wish' | 'world' | 'flame'>('wish');
   const [resultLog, setResultLog] = useState<string | null>(null);
 
   const handleManifestWish = async () => {
-    const t = await mintToken('djinn.wish.manifest', { intent: wishIntent });
-    addLedger('djinn.wish.manifested', { intent: wishIntent, fp: t.fp });
-    setResultLog(`[WISH MANIFESTED] Intent recorded to offline ledger. Receipt fingerprint: ${t.fp}. Air-gapped latent synthesis completed.`);
+    const t = await mintToken('djinn.wish.manifest', { intentLength: wishIntent.length });
+    addLedger('djinn.wish.manifested', { intentLength: wishIntent.length, fp: t.fp });
+    setResultLog(`[WISH MANIFESTED] Intent recorded to offline ledger. Receipt fingerprint: ${t.fp}. No model adapter invoked; local receipt only.`);
   };
 
   const handleGenerateWorld = async () => {
-    const t = await mintToken('djinn.world.synthesis', { seed: worldSeed });
-    addLedger('djinn.world.synthesized', { seed: worldSeed, fp: t.fp });
-    setResultLog(`[LATENT WORLD GENERATED] World geometry synthesized from seed "${worldSeed}". Correlation token: ${t.fp}.`);
+    const t = await mintToken('djinn.world.synthesis', { seedLength: worldSeed.length });
+    addLedger('djinn.world.synthesized', { seedLength: worldSeed.length, fp: t.fp });
+    setResultLog(`[LATENT WORLD GENERATED] Seed receipt recorded locally; no world generator invoked for seed "${worldSeed}". Correlation token: ${t.fp}.`);
   };
 
   return (
