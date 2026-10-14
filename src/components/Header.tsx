@@ -35,6 +35,8 @@ export const Header: React.FC = () => {
     ghostAll,
     restoreAll,
     showGate,
+    session,
+    logoutSession,
   } = useCryptic();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -99,6 +101,11 @@ export const Header: React.FC = () => {
             <span className="px-1.5 py-0.5 rounded text-[8px] bg-[#74ff9b]/15 text-[#74ff9b] border border-[#74ff9b]/30">
               SYS.OP.ONLINE
             </span>
+            {session?.authenticated && (
+              <span className="hidden md:inline px-1.5 py-0.5 rounded text-[8px] bg-[#42f5ff]/15 text-[#42f5ff] border border-[#42f5ff]/30 font-semibold truncate max-w-[130px]">
+                OP: {session.operatorCallsign}
+              </span>
+            )}
           </div>
         </div>
 

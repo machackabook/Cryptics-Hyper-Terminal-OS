@@ -15,18 +15,32 @@ import {
   Layers,
   Radio,
   Search,
+  CheckCircle2,
+  RefreshCw,
+  Send,
 } from 'lucide-react';
 import { EmergencyIncident, PeerBeacon } from '../../types';
 
 export const InteractiveGlobeModule: React.FC = () => {
-  const { incidents, resolveIncident, weatherStations, beacons, addBeacon } = useCryptic();
+  const { incidents, resolveIncident, weatherStations, beacons, addBeacon, mintToken, addLedger } = useCryptic();
 
   const [activeTab, setActiveTab] = useState<'globe3d' | 'incidents' | 'beacons' | 'weather'>('globe3d');
   const [selectedIncident, setSelectedIncident] = useState<EmergencyIncident | null>(incidents[0] || null);
   const [selectedBeacon, setSelectedBeacon] = useState<PeerBeacon | null>(beacons[0] || null);
   const [zoomLevel, setZoomLevel] = useState<number>(2); // 1 = Global, 2 = Regional, 3 = Street
   const [searchCoord, setSearchCoord] = useState<string>('');
-  const [trailCamFeedActive, setTrailCamFeedActive] = useState<boolean>(true);
+  const [camMode, setCamMode] = useState<'IR_THERMAL' | 'OPTICAL' | 'LIDAR'>('IR_THERMAL');
+  const [hudNotice, setHudNotice] = useState<string | null>(null);
+  const [pingStatus, setPingStatus] = useState<Record<string, string>>({});
+
+  // Active Coordinates tracking state
+  const [currentCoords, setCurrentCoords] = useState({
+    lat: 37.7749,
+    lng: -122.4194,
+    altitude: 48.5,
+    plusCode: '849VQV6G+X7',
+    sector: 'Zone 10-Alpha',
+  });
 
   // New beacon form state
   const [newCallsign, setNewCallsign] = useState('');
@@ -93,7 +107,7 @@ export const InteractiveGlobeModule: React.FC = () => {
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Latitude and Longitude Grid Lines (3D spherical projection simulation)
+      // Latitude and Longitude Grid Lines
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -102,7 +116,6 @@ export const InteractiveGlobeModule: React.FC = () => {
       ctx.strokeStyle = 'rgba(66, 245, 255, 0.25)';
       ctx.lineWidth = 1;
 
-      // Parallels of Latitude
       for (let lat = -60; lat <= 60; lat += 20) {
         const y = cy + (lat / 90) * radius;
         const rx = Math.sqrt(Math.max(0, radius * radius - (y - cy) * (y - cy)));
@@ -111,7 +124,6 @@ export const InteractiveGlobeModule: React.FC = () => {
         ctx.stroke();
       }
 
-      // Meridians of Longitude (rotating)
       for (let lon = 0; lon < 360; lon += 30) {
         const angle = ((lon + rotation) * Math.PI) / 180;
         const xOffset = Math.sin(angle) * radius;
@@ -122,7 +134,7 @@ export const InteractiveGlobeModule: React.FC = () => {
         }
       }
 
-      // Continents representation as digital polygonal vector clusters
+      // Continents representation
       ctx.fillStyle = 'rgba(116, 255, 155, 0.28)';
       ctx.strokeStyle = 'rgba(116, 255, 155, 0.5)';
       ctx.lineWidth = 1;
@@ -141,7 +153,7 @@ export const InteractiveGlobeModule: React.FC = () => {
         }
       });
 
-      // Markers for Incidents (Wildfire cams / Accidents)
+      // Markers for Incidents
       incidents.forEach((inc, idx) => {
         const markerAngle = ((inc.lng + 180 + rotation) * Math.PI) / 180;
         const isFacing = Math.cos(markerAngle) > -0.15;
@@ -149,27 +161,24 @@ export const InteractiveGlobeModule: React.FC = () => {
           const mx = cx + Math.sin(markerAngle) * radius * 0.8;
           const my = cy - (inc.lat / 90) * radius * 0.8;
 
-          // Incident pulsing beacon
           ctx.fillStyle = inc.severity === 'critical' ? 'rgba(255, 71, 126, 0.9)' : 'rgba(245, 206, 112, 0.9)';
           ctx.beginPath();
           ctx.arc(mx, my, 4 + Math.sin(Date.now() / 200 + idx) * 2, 0, Math.PI * 2);
           ctx.fill();
 
-          // Radar rings
           ctx.strokeStyle = inc.severity === 'critical' ? 'rgba(255, 71, 126, 0.4)' : 'rgba(245, 206, 112, 0.4)';
           ctx.beginPath();
           ctx.arc(mx, my, 10 + (Date.now() / 50 + idx * 8) % 16, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Label
           ctx.fillStyle = '#ffffff';
           ctx.font = '9px monospace';
           ctx.fillText(inc.plusCode.slice(0, 8), mx + 8, my + 3);
         }
       });
 
-      // Markers for Peer Beacons (Friends / UUID location tracking)
-      beacons.forEach((bcn, idx) => {
+      // Markers for Peer Beacons
+      beacons.forEach((bcn) => {
         const bAngle = ((bcn.lng + 180 + rotation) * Math.PI) / 180;
         if (Math.cos(bAngle) > -0.15) {
           const bx = cx + Math.sin(bAngle) * radius * 0.8;
@@ -193,14 +202,14 @@ export const InteractiveGlobeModule: React.FC = () => {
 
       ctx.restore();
 
-      // Outer atmospheric border ring
+      // Outer ring
       ctx.strokeStyle = 'rgba(66, 245, 255, 0.6)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Crosshairs & HUD coordinates
+      // Crosshairs
       ctx.strokeStyle = 'rgba(66, 245, 255, 0.3)';
       ctx.beginPath();
       ctx.moveTo(cx - 15, cy);
@@ -230,14 +239,64 @@ export const InteractiveGlobeModule: React.FC = () => {
       status: 'active',
       signalDbm: -58,
     });
+    setHudNotice(`Broadcasted new beacon [${newCallsign.toUpperCase()}]`);
     setNewCallsign('');
+    setTimeout(() => setHudNotice(null), 3000);
+  };
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchCoord.trim()) return;
+
+    const query = searchCoord.trim();
+    const t = await mintToken('geospatial.lookup', { query });
+    addLedger('geospatial.lookup', { query, fp: t.fp });
+
+    // Check if user entered Plus Code
+    if (query.includes('+')) {
+      setCurrentCoords({
+        lat: 37.785,
+        lng: -122.408,
+        altitude: 52.0,
+        plusCode: query.toUpperCase(),
+        sector: 'Sector ' + query.slice(0, 4),
+      });
+      setZoomLevel(3);
+      setHudNotice(`Located Plus Code: ${query.toUpperCase()}`);
+    } else {
+      const parts = query.split(/[\s,]+/);
+      if (parts.length >= 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
+        setCurrentCoords({
+          lat: parseFloat(parts[0]),
+          lng: parseFloat(parts[1]),
+          altitude: 40.0,
+          plusCode: '849V' + Math.random().toString(36).substring(2, 6).toUpperCase() + '+X7',
+          sector: 'Custom Point',
+        });
+        setZoomLevel(2);
+        setHudNotice(`Centered coordinates: ${parts[0]}, ${parts[1]}`);
+      } else {
+        setHudNotice(`Lookup complete for "${query}". Quad synchronized.`);
+      }
+    }
+    setTimeout(() => setHudNotice(null), 3500);
+  };
+
+  const handlePingBeacon = async (beaconId: string, callsign: string) => {
+    setPingStatus(prev => ({ ...prev, [beaconId]: 'Pinging...' }));
+    const t = await mintToken('beacon.ping', { callsign });
+    setTimeout(() => {
+      const rtt = Math.floor(Math.random() * 25 + 14);
+      setPingStatus(prev => ({ ...prev, [beaconId]: `RTT ${rtt}ms · dBm -54` }));
+      addLedger('beacon.ping.response', { callsign, rtt, fp: t.fp });
+    }, 450);
   };
 
   return (
     <div className="flex flex-col h-full bg-[#030914] text-xs font-mono overflow-hidden">
       {/* Sub-nav Tab Controls */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#42f5ff]/20 bg-[#051020]">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => setActiveTab('globe3d')}
             className={`px-2.5 py-1 rounded text-[10px] font-semibold transition cursor-pointer flex items-center gap-1 ${
@@ -277,21 +336,21 @@ export const InteractiveGlobeModule: React.FC = () => {
           <button
             onClick={() => setZoomLevel(1)}
             title="Global Orbital View"
-            className={`px-2 py-0.5 rounded text-[9px] ${zoomLevel === 1 ? 'bg-[#42f5ff] text-black font-bold' : 'text-[#8aa0b6]'}`}
+            className={`px-2 py-0.5 rounded text-[9px] cursor-pointer transition ${zoomLevel === 1 ? 'bg-[#42f5ff] text-black font-bold' : 'text-[#8aa0b6] hover:text-white'}`}
           >
             GLOBE
           </button>
           <button
             onClick={() => setZoomLevel(2)}
             title="Regional Sector View"
-            className={`px-2 py-0.5 rounded text-[9px] ${zoomLevel === 2 ? 'bg-[#42f5ff] text-black font-bold' : 'text-[#8aa0b6]'}`}
+            className={`px-2 py-0.5 rounded text-[9px] cursor-pointer transition ${zoomLevel === 2 ? 'bg-[#42f5ff] text-black font-bold' : 'text-[#8aa0b6] hover:text-white'}`}
           >
             REGION
           </button>
           <button
             onClick={() => setZoomLevel(3)}
             title="Street Coordinates & Plus Code Grid"
-            className={`px-2 py-0.5 rounded text-[9px] ${zoomLevel === 3 ? 'bg-[#42f5ff] text-black font-bold' : 'text-[#8aa0b6]'}`}
+            className={`px-2 py-0.5 rounded text-[9px] cursor-pointer transition ${zoomLevel === 3 ? 'bg-[#42f5ff] text-black font-bold' : 'text-[#8aa0b6] hover:text-white'}`}
           >
             STREET
           </button>
@@ -310,26 +369,33 @@ export const InteractiveGlobeModule: React.FC = () => {
           />
 
           {/* Precision Coordinates & Plus Code HUD HUD Overlay */}
-          <div className="absolute top-2 left-2 p-2 rounded bg-[#040e1c]/80 border border-[#42f5ff]/30 text-[9px] backdrop-blur-sm space-y-0.5 pointer-events-none">
+          <div className="absolute top-2 left-2 p-2 rounded bg-[#040e1c]/85 border border-[#42f5ff]/30 text-[9px] backdrop-blur-sm space-y-0.5 pointer-events-none">
             <div className="text-[#42f5ff] font-bold">GRID LOCATOR // PRECISION</div>
-            <div>LAT: <span className="text-[#74ff9b]">37.7749° N</span> · LNG: <span className="text-[#74ff9b]">122.4194° W</span></div>
-            <div>ALTITUDE: <span className="text-[#f5ce70]">48.5m MSL</span> · BEARING: <span className="text-white">184° SSE</span></div>
-            <div>PLUS CODE: <span className="text-[#42f5ff] font-bold">849VQV6G+X7</span></div>
-            <div>STATUS: <span className="text-[#74ff9b]">TRAIL SENSORS SYNCHRONIZED</span></div>
+            <div>LAT: <span className="text-[#74ff9b]">{currentCoords.lat.toFixed(4)}° N</span> · LNG: <span className="text-[#74ff9b]">{Math.abs(currentCoords.lng).toFixed(4)}° W</span></div>
+            <div>ALTITUDE: <span className="text-[#f5ce70]">{currentCoords.altitude}m MSL</span> · BEARING: <span className="text-white">184° SSE</span></div>
+            <div>PLUS CODE: <span className="text-[#42f5ff] font-bold">{currentCoords.plusCode}</span></div>
+            <div>SECTOR: <span className="text-[#74ff9b]">{currentCoords.sector}</span></div>
           </div>
+
+          {/* Temporary notice toast on HUD */}
+          {hudNotice && (
+            <div className="absolute top-2 right-2 p-2 rounded-lg bg-[#041c30]/90 border border-[#74ff9b] text-[10px] text-[#74ff9b] backdrop-blur-md animate-fadeIn shadow-lg">
+              ✓ {hudNotice}
+            </div>
+          )}
 
           {/* Incident Quick Warning Alert Pill */}
           {incidents.some(i => i.status !== 'CONTAINED') && (
             <div className="absolute bottom-2 left-2 right-2 p-2 rounded-lg bg-red-950/70 border border-red-500/40 text-[10px] text-red-200 flex items-center justify-between backdrop-blur-sm">
-              <div className="flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-                <span>
+              <div className="flex items-center gap-1.5 truncate mr-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse flex-shrink-0" />
+                <span className="truncate">
                   <strong>CRITICAL ALERT:</strong> {incidents.find(i => i.severity === 'critical')?.title} ({incidents.find(i => i.severity === 'critical')?.plusCode})
                 </span>
               </div>
               <button
                 onClick={() => setActiveTab('incidents')}
-                className="px-2 py-0.5 rounded bg-red-500 text-white font-bold text-[9px] hover:bg-red-400 cursor-pointer"
+                className="px-2.5 py-1 rounded bg-red-500 text-white font-bold text-[9px] hover:bg-red-400 cursor-pointer flex-shrink-0"
               >
                 VIEW INCIDENT
               </button>
@@ -338,7 +404,7 @@ export const InteractiveGlobeModule: React.FC = () => {
         </div>
 
         {/* Right Details Inspector Panel */}
-        <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-[#42f5ff]/20 bg-[#040c1a] flex flex-col p-3 overflow-y-auto">
+        <div className="w-full md:w-84 border-t md:border-t-0 md:border-l border-[#42f5ff]/20 bg-[#040c1a] flex flex-col p-3 overflow-y-auto">
           {activeTab === 'globe3d' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-[#42f5ff]/20 pb-1.5">
@@ -348,32 +414,52 @@ export const InteractiveGlobeModule: React.FC = () => {
                 <span className="text-[9px] text-[#74ff9b]">OFFLINE CACHED</span>
               </div>
 
-              {/* Plus Code Search input */}
-              <div className="flex gap-1.5">
+              {/* Plus Code Search Form */}
+              <form onSubmit={handleSearch} className="flex gap-1.5">
                 <input
                   type="text"
                   value={searchCoord}
                   onChange={(e) => setSearchCoord(e.target.value)}
-                  placeholder="Enter Plus Code or Lat,Lng..."
+                  placeholder="Enter Plus Code or Lat, Lng..."
                   className="flex-1 bg-[#061426] border border-[#42f5ff]/30 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-[#42f5ff]"
                 />
                 <button
-                  type="button"
-                  className="px-2.5 py-1 bg-[#42f5ff]/20 text-[#42f5ff] border border-[#42f5ff]/40 rounded hover:bg-[#42f5ff]/30 cursor-pointer"
+                  type="submit"
+                  title="Locate Plus Code or Coordinates"
+                  className="px-2.5 py-1 bg-[#42f5ff]/20 text-[#42f5ff] border border-[#42f5ff]/40 rounded hover:bg-[#42f5ff]/30 cursor-pointer flex items-center justify-center transition"
                 >
                   <Search className="w-3 h-3" />
                 </button>
+              </form>
+
+              {/* Coordinate presets */}
+              <div className="flex gap-1 text-[8px]">
+                {['849VQV6G+X7', '85633P2W+92', '9C3XGV65+Q9'].map(code => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      setSearchCoord(code);
+                      setCurrentCoords(prev => ({ ...prev, plusCode: code }));
+                      setHudNotice(`Selected Plus Code preset ${code}`);
+                      setTimeout(() => setHudNotice(null), 2500);
+                    }}
+                    className="px-1.5 py-0.5 rounded bg-[#061426] text-[#42f5ff] border border-[#42f5ff]/20 hover:border-[#42f5ff]/50 cursor-pointer truncate"
+                  >
+                    {code}
+                  </button>
+                ))}
               </div>
 
               <div className="p-2.5 rounded-lg bg-[#061426] border border-[#42f5ff]/20 space-y-1.5 text-[10px]">
                 <div className="text-[#8ba4bf] uppercase font-bold text-[9px]">LOCAL COORDINATE TRANSLATION</div>
                 <div className="flex justify-between">
                   <span className="text-[#8ba4bf]">Global Sector:</span>
-                  <span className="text-white">Zone 10-Alpha</span>
+                  <span className="text-white">{currentCoords.sector}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#8ba4bf]">Plus Code Quad:</span>
-                  <span className="text-[#42f5ff] font-bold">849VQV6G+X7</span>
+                  <span className="text-[#42f5ff] font-bold">{currentCoords.plusCode}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#8ba4bf]">Resolution Scale:</span>
@@ -385,22 +471,38 @@ export const InteractiveGlobeModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Nature Trail Cam Live Snapshot Preview */}
+              {/* Nature Trail Cam Live Snapshot Preview with Mode Cycling */}
               <div className="border border-[#42f5ff]/20 rounded-lg p-2 bg-[#061426] space-y-1.5">
                 <div className="flex items-center justify-between text-[9px] font-bold">
                   <span className="text-[#74ff9b] flex items-center gap-1">
                     <Camera className="w-3 h-3 text-[#74ff9b]" /> NATURE TRAIL CAM #409
                   </span>
-                  <span className="text-[#8aa0b6]">THERMAL INFRARED</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCamMode(prev => prev === 'IR_THERMAL' ? 'OPTICAL' : prev === 'OPTICAL' ? 'LIDAR' : 'IR_THERMAL');
+                      setHudNotice(`Switched Trail Cam filter to ${camMode}`);
+                      setTimeout(() => setHudNotice(null), 2500);
+                    }}
+                    className="px-1.5 py-0.5 rounded bg-[#42f5ff]/15 text-[#42f5ff] border border-[#42f5ff]/30 text-[8px] hover:bg-[#42f5ff]/30 cursor-pointer"
+                  >
+                    MODE: {camMode}
+                  </button>
                 </div>
                 <div className="relative rounded overflow-hidden h-28 bg-black flex items-center justify-center border border-[#42f5ff]/30">
                   <img
                     src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600&auto=format&fit=crop&q=80"
                     alt="Nature trail wildfire sensor camera"
-                    className="w-full h-full object-cover opacity-80"
+                    className={`w-full h-full object-cover transition duration-300 ${
+                      camMode === 'IR_THERMAL'
+                        ? 'hue-rotate-180 contrast-125'
+                        : camMode === 'LIDAR'
+                        ? 'invert contrast-150 brightness-75'
+                        : 'opacity-90'
+                    }`}
                   />
-                  <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[8px] text-[#74ff9b] border border-[#74ff9b]/30">
-                    LIVE IR STREAM · 184°C SPIKE
+                  <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/75 text-[8px] text-[#74ff9b] border border-[#74ff9b]/30">
+                    {camMode === 'IR_THERMAL' ? 'LIVE IR STREAM · 184°C SPIKE' : camMode === 'LIDAR' ? 'LIDAR 3D CANOPY DENSITY' : 'OPTICAL 4K SENSOR FEED'}
                   </div>
                   <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-red-950/80 text-[8px] text-red-300 border border-red-500/40">
                     CANOPY MONITOR
@@ -465,14 +567,29 @@ export const InteractiveGlobeModule: React.FC = () => {
                     <span>Coordinates:</span>
                     <span className="text-white">{selectedIncident.lat.toFixed(4)}, {selectedIncident.lng.toFixed(4)}</span>
                   </div>
-                  {selectedIncident.status !== 'CONTAINED' && (
-                    <button
-                      onClick={() => resolveIncident(selectedIncident.id)}
-                      className="w-full mt-2 py-1.5 bg-emerald-500 text-[#02050b] font-bold rounded hover:bg-emerald-400 transition cursor-pointer"
-                    >
-                      MARK DISPATCH CONTAINED
-                    </button>
-                  )}
+                  <div className="flex justify-between text-[#8aa0b6]">
+                    <span>Plus Code:</span>
+                    <span className="text-[#42f5ff] font-bold">{selectedIncident.plusCode}</span>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    {selectedIncident.status !== 'CONTAINED' ? (
+                      <button
+                        onClick={() => {
+                          resolveIncident(selectedIncident.id);
+                          setHudNotice(`Incident ${selectedIncident.id} marked as CONTAINED.`);
+                          setTimeout(() => setHudNotice(null), 3000);
+                        }}
+                        className="flex-1 py-1.5 bg-emerald-500 text-[#02050b] font-bold rounded hover:bg-emerald-400 transition cursor-pointer"
+                      >
+                        MARK DISPATCH CONTAINED
+                      </button>
+                    ) : (
+                      <div className="w-full text-center py-1 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
+                        STATUS: CONTAINED &amp; RESOLVED
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -487,8 +604,8 @@ export const InteractiveGlobeModule: React.FC = () => {
                 <span className="text-[9px] text-[#8aa0b6]">UUID MESH</span>
               </div>
 
-              {/* Beacon List */}
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+              {/* Beacon List with Ping and Details */}
+              <div className="space-y-1.5 max-h-44 overflow-y-auto">
                 {beacons.map((bcn) => (
                   <div
                     key={bcn.id}
@@ -501,12 +618,29 @@ export const InteractiveGlobeModule: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[10px] text-white">[{bcn.callsign}]</span>
-                      <span className="text-[8px] text-[#74ff9b]">{bcn.signalDbm} dBm</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[8px] text-[#74ff9b]">{bcn.signalDbm} dBm</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePingBeacon(bcn.id, bcn.callsign);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-[#42f5ff]/15 text-[#42f5ff] text-[8px] font-bold hover:bg-[#42f5ff]/30 cursor-pointer"
+                        >
+                          PING
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[8px] text-[#8aa0b6] flex justify-between mt-0.5">
                       <span>Plus: {bcn.plusCode}</span>
                       <span>Alt: {bcn.altitude}m</span>
                     </div>
+                    {pingStatus[bcn.id] && (
+                      <div className="mt-1 text-[8px] text-[#42f5ff] font-bold">
+                        {pingStatus[bcn.id]}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -555,7 +689,7 @@ export const InteractiveGlobeModule: React.FC = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-1 rounded bg-[#74ff9b] text-[#02050b] font-bold text-[9px] hover:bg-[#8affaa] cursor-pointer"
+                  className="w-full py-1.5 rounded bg-[#74ff9b] text-[#02050b] font-bold text-[9px] hover:bg-[#8affaa] cursor-pointer shadow-[0_0_12px_rgba(116,255,155,0.3)] transition"
                 >
                   BROADCAST BEACON
                 </button>
@@ -569,7 +703,16 @@ export const InteractiveGlobeModule: React.FC = () => {
                 <span className="font-bold text-[#f5ce70] text-[11px] flex items-center gap-1">
                   <Wind className="w-3.5 h-3.5" /> REGIONAL METEOROLOGY &amp; ATMOSPHERE
                 </span>
-                <span className="text-[9px] text-[#8aa0b6]">LIVE SENSORS</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHudNotice('Atmospheric telemetry stations refreshed.');
+                    setTimeout(() => setHudNotice(null), 2500);
+                  }}
+                  className="text-[8px] px-1.5 py-0.5 rounded bg-[#f5ce70]/20 text-[#f5ce70] border border-[#f5ce70]/30 hover:bg-[#f5ce70]/30 cursor-pointer flex items-center gap-1"
+                >
+                  <RefreshCw className="w-2.5 h-2.5" /> REFRESH
+                </button>
               </div>
 
               <div className="space-y-2">

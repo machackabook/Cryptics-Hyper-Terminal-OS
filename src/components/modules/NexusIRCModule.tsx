@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCryptic } from '../../store/crypticContext';
-import { MessageSquare, Send, Users, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Send, Users, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const NexusIRCModule: React.FC = () => {
   const { ircMessages, sendIRC } = useCryptic();
@@ -9,13 +9,21 @@ export const NexusIRCModule: React.FC = () => {
 
   const channels = ['#sovereign', '#gaia-mesh', '#cryptic-dev'];
 
+  const quickBroadcasts = [
+    'Emergency Corridors Mapped',
+    '963 Hz Harmonic Carrier Online',
+    'Quorum Confirmed 4/4',
+    'Plus Codes GPS Linked',
+  ];
+
   const filteredMessages = ircMessages.filter((m) => m.channel === activeChannel);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMsg.trim()) return;
-    sendIRC(activeChannel, inputMsg.trim());
-    setInputMsg('');
+  const handleSend = (e?: React.FormEvent, textOverride?: string) => {
+    if (e) e.preventDefault();
+    const content = textOverride || inputMsg;
+    if (!content.trim()) return;
+    sendIRC(activeChannel, content.trim());
+    if (!textOverride) setInputMsg('');
   };
 
   return (
@@ -42,6 +50,21 @@ export const NexusIRCModule: React.FC = () => {
         </span>
       </div>
 
+      {/* Quick broadcast pills */}
+      <div className="flex items-center gap-1 px-3 py-1 bg-[#030b18] border-b border-[#42f5ff]/10 overflow-x-auto text-[8px]">
+        <span className="text-[#8aa0b6] font-bold flex-shrink-0">QUICK:</span>
+        {quickBroadcasts.map((qb) => (
+          <button
+            key={qb}
+            type="button"
+            onClick={() => handleSend(undefined, qb)}
+            className="px-2 py-0.5 rounded bg-[#061426] border border-[#42f5ff]/20 text-[#42f5ff] hover:bg-[#42f5ff]/20 whitespace-nowrap cursor-pointer transition"
+          >
+            {qb}
+          </button>
+        ))}
+      </div>
+
       {/* Message Feed */}
       <div className="flex-1 p-3 overflow-y-auto space-y-2 bg-[#01040a]/90 select-text">
         {filteredMessages.map((msg) => (
@@ -59,17 +82,17 @@ export const NexusIRCModule: React.FC = () => {
       </div>
 
       {/* Input bar */}
-      <form onSubmit={handleSend} className="p-2 border-t border-[#42f5ff]/20 bg-[#040d1a] flex gap-2">
+      <form onSubmit={(e) => handleSend(e)} className="p-2 border-t border-[#42f5ff]/20 bg-[#040d1a] flex gap-2">
         <input
           type="text"
           value={inputMsg}
           onChange={(e) => setInputMsg(e.target.value)}
-          placeholder={`Message ${activeChannel}...`}
+          placeholder={`Broadcast encrypted packet to ${activeChannel}...`}
           className="flex-1 bg-[#061426] border border-[#42f5ff]/30 rounded px-2.5 py-1 text-[10px] text-white focus:outline-none focus:border-[#42f5ff]"
         />
         <button
           type="submit"
-          className="px-3 py-1 bg-[#42f5ff] text-[#02050b] font-bold rounded text-[10px] hover:bg-[#74f8ff] cursor-pointer flex items-center gap-1"
+          className="px-3 py-1 bg-[#42f5ff] text-[#02050b] font-bold rounded text-[10px] hover:bg-[#74f8ff] cursor-pointer flex items-center gap-1 transition"
         >
           <Send className="w-3 h-3" /> SEND
         </button>

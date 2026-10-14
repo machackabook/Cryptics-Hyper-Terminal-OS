@@ -61,6 +61,17 @@ export interface CrypticToken {
   fp: string;
 }
 
+export interface UserSession {
+  sessionId: string;
+  authenticated: boolean;
+  operatorCallsign: string;
+  authorityLevel: 'SOVEREIGN_OPERATOR' | 'AIR_GAPPED_NODE' | 'TDOC_SENTINEL';
+  fingerprint: string;
+  token: string;
+  authenticatedAt: number;
+  expiresAt: number;
+}
+
 // Geospatial & Emergency & Social Types
 export interface PeerBeacon {
   id: string;

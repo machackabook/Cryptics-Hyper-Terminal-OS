@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCryptic } from '../../store/crypticContext';
-import { KeyRound, Shield, Check, Copy } from 'lucide-react';
+import { KeyRound, Shield, Check, Copy, RefreshCw, Key } from 'lucide-react';
 
 export const SSHIdentityModule: React.FC = () => {
   const { mintToken, addLedger } = useCryptic();
@@ -9,6 +9,11 @@ export const SSHIdentityModule: React.FC = () => {
   );
   const [normalizedFp, setNormalizedFp] = useState<string>('SHA256:7f9a21b34e8912cde489b01fa239');
   const [copied, setCopied] = useState(false);
+
+  const sampleEd25519 =
+    'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH9a508N1s8Zq3X9b7kF7f3V7e9p21qR8yU9t7Z4k1aB sovereign-operator@cryptic';
+  const sampleP256 =
+    'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBM9Y5F9u... nexus-adam@sovereign';
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(pubKey);
@@ -35,6 +40,31 @@ export const SSHIdentityModule: React.FC = () => {
         <span className="text-[9px] text-[#74ff9b] font-bold">LOCAL PROOF</span>
       </div>
 
+      {/* Preset Key Samples */}
+      <div className="flex items-center gap-1.5 text-[8px]">
+        <span className="text-[#8aa0b6]">LOAD SAMPLE:</span>
+        <button
+          type="button"
+          onClick={() => {
+            setPubKey(sampleEd25519);
+            handleRecompute();
+          }}
+          className="px-2 py-0.5 rounded bg-[#061426] border border-[#42f5ff]/20 text-[#42f5ff] hover:bg-[#42f5ff]/20 cursor-pointer transition"
+        >
+          Ed25519 Key
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPubKey(sampleP256);
+            handleRecompute();
+          }}
+          className="px-2 py-0.5 rounded bg-[#061426] border border-[#74ff9b]/20 text-[#74ff9b] hover:bg-[#74ff9b]/20 cursor-pointer transition"
+        >
+          ECDSA P-256
+        </button>
+      </div>
+
       <div className="space-y-1">
         <label className="text-[9px] text-[#8aa0b6] block">PUBLIC KEY (ED25519 / ECDSA):</label>
         <textarea
@@ -53,14 +83,14 @@ export const SSHIdentityModule: React.FC = () => {
       <div className="flex gap-2">
         <button
           onClick={handleCopy}
-          className="flex-1 py-1.5 rounded bg-[#061426] border border-[#42f5ff]/30 text-[#42f5ff] font-bold text-[10px] hover:bg-[#42f5ff]/15 cursor-pointer flex items-center justify-center gap-1.5"
+          className="flex-1 py-1.5 rounded bg-[#061426] border border-[#42f5ff]/30 text-[#42f5ff] font-bold text-[10px] hover:bg-[#42f5ff]/15 cursor-pointer flex items-center justify-center gap-1.5 transition"
         >
           {copied ? <Check className="w-3 h-3 text-[#74ff9b]" /> : <Copy className="w-3 h-3" />}
           {copied ? 'COPIED TO CLIPBOARD' : 'COPY PUBLIC KEY'}
         </button>
         <button
           onClick={handleRecompute}
-          className="flex-1 py-1.5 rounded bg-[#74ff9b] text-[#02050b] font-bold text-[10px] hover:bg-[#8affaa] cursor-pointer"
+          className="flex-1 py-1.5 rounded bg-[#74ff9b] text-[#02050b] font-bold text-[10px] hover:bg-[#8affaa] cursor-pointer shadow-[0_0_12px_rgba(116,255,155,0.3)] transition"
         >
           MINT FRESH ATTESTATION
         </button>

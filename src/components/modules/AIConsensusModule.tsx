@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { useCryptic } from '../../store/crypticContext';
-import { Users, CheckCircle2, ShieldCheck, RefreshCw, Cpu, Sparkles, AlertCircle } from 'lucide-react';
+import { Users, CheckCircle2, ShieldCheck, RefreshCw, Cpu, Sparkles, AlertCircle, Zap } from 'lucide-react';
 
 export const AIConsensusModule: React.FC = () => {
-  const { consensusVotes, runConsensusQuorum, mintToken } = useCryptic();
+  const { consensusVotes, runConsensusQuorum, mintToken, addLedger } = useCryptic();
   const [queryIntent, setQueryIntent] = useState('Optimize regional emergency corridor bypass around wildfire sector');
   const [running, setRunning] = useState(false);
   const [lastQuorumResult, setLastQuorumResult] = useState<{ quorum: boolean; consensusRate: number } | null>(null);
 
-  const handleRunVote = async () => {
+  const presets = [
+    'Wildfire Corridor Routing',
+    'Zero-Latency Mesh Failover',
+    'Air-Gapped Privacy Attestation',
+    'BLE MIDI Synchronization',
+  ];
+
+  const handleRunVote = async (overrideIntent?: string) => {
+    const target = overrideIntent || queryIntent;
     setRunning(true);
     try {
-      const res = await runConsensusQuorum(queryIntent);
+      const res = await runConsensusQuorum(target);
       setLastQuorumResult(res);
     } finally {
       setRunning(false);
@@ -45,13 +53,30 @@ export const AIConsensusModule: React.FC = () => {
             className="flex-1 bg-[#061426] border border-[#42f5ff]/30 rounded px-2.5 py-1.5 text-[10px] text-white focus:outline-none focus:border-[#42f5ff]"
           />
           <button
-            onClick={handleRunVote}
+            onClick={() => handleRunVote()}
             disabled={running}
-            className="px-3 py-1.5 bg-[#74ff9b] text-[#02050b] font-bold rounded text-[10px] hover:bg-[#8affaa] transition cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-[#74ff9b] text-[#02050b] font-bold rounded text-[10px] hover:bg-[#8affaa] transition cursor-pointer flex items-center gap-1.5 shadow-[0_0_12px_rgba(116,255,155,0.3)]"
           >
             <RefreshCw className={`w-3 h-3 ${running ? 'animate-spin' : ''}`} />
-            {running ? 'POLLING QUORUM...' : 'VOTE'}
+            {running ? 'POLLING...' : 'VOTE'}
           </button>
+        </div>
+
+        {/* Quick Presets */}
+        <div className="flex gap-1.5 overflow-x-auto pt-0.5">
+          {presets.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                setQueryIntent(p);
+                handleRunVote(p);
+              }}
+              className="px-2 py-0.5 rounded bg-[#061426] border border-[#42f5ff]/20 text-[8px] text-[#42f5ff] hover:bg-[#42f5ff]/20 whitespace-nowrap cursor-pointer transition"
+            >
+              {p}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -97,9 +122,12 @@ export const AIConsensusModule: React.FC = () => {
             </div>
           </div>
         </div>
-        <span className="text-[9px] px-2 py-0.5 rounded bg-[#42f5ff]/20 text-[#42f5ff] border border-[#42f5ff]/30 font-bold">
-          BFT CERTIFIED
-        </span>
+        <button
+          onClick={() => handleRunVote()}
+          className="text-[9px] px-2.5 py-1 rounded bg-[#42f5ff]/20 text-[#42f5ff] border border-[#42f5ff]/30 font-bold hover:bg-[#42f5ff]/30 cursor-pointer flex items-center gap-1 transition"
+        >
+          <Zap className="w-3 h-3" /> RE-VERIFY
+        </button>
       </div>
     </div>
   );
