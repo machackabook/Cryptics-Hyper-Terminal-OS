@@ -1,0 +1,378 @@
+{
+  "schema": "cryptic.nodes.public.v1",
+  "updated": "2026-10-13",
+  "gateway": "https://api.crypticnews.org",
+  "nodes": [
+    {
+      "id": "message-bus",
+      "label": "Cryptic Message Bus",
+      "kind": "edge-message-bus",
+      "interface_url": "https://bus.crypticnews.org/v1/status",
+      "embed": false,
+      "capabilities": [
+        "edge-relay",
+        "message-receipts"
+      ],
+      "direct_write": false
+    },
+    {
+      "id": "cryptic",
+      "label": "Cryptic HyperTerminal",
+      "kind": "command-center",
+      "repo": "https://github.com/machackabook/Cryptic",
+      "interface_url": "https://machackabook.github.io/Cryptic/",
+      "embed": false,
+      "capabilities": [
+        "terminal",
+        "runtime-token",
+        "ledger",
+        "comms",
+        "change-proposal"
+      ],
+      "direct_write": false,
+      "auth": "gateway-token+private-adapter"
+    },
+    {
+      "id": "crypticnews",
+      "label": "Cryptic News",
+      "kind": "public-hub",
+      "interface_url": "https://crypticnews.org",
+      "embed": false,
+      "capabilities": [
+        "public-navigation",
+        "project-hub"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "gateway",
+      "label": "Cryptic Capability Gateway",
+      "kind": "edge-gateway",
+      "interface_url": "https://api.crypticnews.org/v1/status",
+      "embed": false,
+      "capabilities": [
+        "signed-runtime-token",
+        "opaque-envelope",
+        "change-proposal"
+      ],
+      "direct_write": false,
+      "auth": "origin+signed-capability"
+    },
+    {
+      "id": "welcome",
+      "label": "Welcome Sentience",
+      "kind": "integrated-interface",
+      "repo": "https://github.com/machackabook/Welcome-Sentience",
+      "interface_url": "./interfaces/welcome-sentience.html",
+      "embed": true,
+      "capabilities": [
+        "consent-surface",
+        "living-wallpaper",
+        "public-attestation"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "genie-djinn",
+      "label": "Genie Djinn // Smokeless Flame Engine",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/genie-djinn.html",
+      "embed": true,
+      "capabilities": [
+        "world-model",
+        "wish-oracle",
+        "smokeless-flame",
+        "attestation-mint"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "matrix-engine",
+      "label": "Sovereign OS Matrix Integration Engine",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/matrix-engine.html",
+      "embed": true,
+      "capabilities": [
+        "kerr-singularity",
+        "hopf-fibration",
+        "sigma-throughput",
+        "golden-army",
+        "master-alchemist"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "galaxies",
+      "label": "7 Galaxies Skybox & Relativistic Orbitals",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/enhanced-skybox-7-galaxies.html",
+      "embed": true,
+      "capabilities": [
+        "skybox-7-galaxies",
+        "keplerian-orbitals",
+        "kerr-lensing",
+        "particle-streams"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "consensus",
+      "label": "D3 Multi-AI Consensus Quorum Engine",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/d3-multi-ai-consensus.html",
+      "embed": true,
+      "capabilities": [
+        "byzantine-fault-tolerance",
+        "topological-quorum",
+        "tokenized-voting"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "voice",
+      "label": "Polyneuromorphic Live Voice Engine",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/polyneuromorphic-live-voice.html",
+      "embed": true,
+      "capabilities": [
+        "neuromorphic-oscilloscope",
+        "spike-trains",
+        "963-solfeggio",
+        "speech-synthesis"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "aurora",
+      "label": "Aurora Singularity Stack Quantum Manifold",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/aurora-singularity-stack.html",
+      "embed": true,
+      "capabilities": [
+        "aurora-ribbons",
+        "quantum-density-field",
+        "vacuum-flux"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "sentinel",
+      "label": "TDOC Sentinel Master V11 Dual Authority",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/tdoc-sentinel-v11.html",
+      "embed": true,
+      "capabilities": [
+        "dual-authority",
+        "ed25519-node-pair",
+        "quine-loop",
+        "evidence-ledger"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "quine",
+      "label": "Polyglot Quine Shell Living Artifact",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/polyglot-quine-shell.html",
+      "embed": true,
+      "capabilities": [
+        "self-replicating-quine",
+        "reactive-size-monitor",
+        "dynamic-chunks",
+        "token-parser"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "embedding",
+      "label": "Gemini Multimodal Embedding 2 Preview",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/gemini-multimodal-embedding.html",
+      "embed": true,
+      "capabilities": [
+        "gemini-embedding-2-preview",
+        "text-image-audio-coembedding",
+        "cosine-similarity",
+        "vector-sphere"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "irc",
+      "label": "Nexus Sovereign IRC Hub",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/nexus-irc-hub.html",
+      "embed": true,
+      "capabilities": [
+        "sovereign-irc",
+        "matrix-mesh",
+        "peer-channels"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "documents",
+      "label": "Document Corpus & PDF Knowledge Core",
+      "kind": "integrated-interface",
+      "interface_url": "./interfaces/pdf-document-corpus.html",
+      "embed": true,
+      "capabilities": [
+        "pdf-document-corpus",
+        "spec-architecture-mapping",
+        "semantic-cross-reference",
+        "continuity-receipts"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "samsung-arm64",
+      "label": "Nexus Node // Samsung ARM64",
+      "kind": "paired-device",
+      "capabilities": [
+        "termux-runtime",
+        "evidence-sync"
+      ],
+      "direct_write": false,
+      "auth": "local-key-pairing-required",
+      "identity_status": "NOT_PAIRED",
+      "note": "No public key enrolled in this public registry. Pairing requires a fresh signed challenge verified by an independent local trust policy."
+    },
+    {
+      "id": "geocore",
+      "label": "Geocore Shepard Tone Engine",
+      "kind": "external-interface",
+      "repo": "https://github.com/Azazeleous/Geocore-Shepopalopadousard-Tone-Engine",
+      "interface_url": "https://geocore-shepard-tone-engine.vercel.app",
+      "embed": false,
+      "capabilities": [
+        "audio-workstation",
+        "shepard-tone",
+        "wav-export"
+      ],
+      "direct_write": false,
+      "auth": "public-read"
+    },
+    {
+      "id": "nexus-core",
+      "label": "Nexus Core",
+      "kind": "source-node",
+      "repo": "https://github.com/machackabook/Nexus_Core",
+      "capabilities": [
+        "source",
+        "factory",
+        "gaia",
+        "docs",
+        "notebooks"
+      ],
+      "direct_write": false,
+      "auth": "github-authenticated-adapter"
+    },
+    {
+      "id": "gaia-generation",
+      "label": "Gaia — The Nexus Generation",
+      "kind": "source-node",
+      "repo": "https://github.com/machackabook/Gaia-The-Nexus-Generation",
+      "capabilities": [
+        "docs",
+        "infra",
+        "security"
+      ],
+      "direct_write": false,
+      "auth": "github-authenticated-adapter"
+    },
+    {
+      "id": "nexus-generation",
+      "label": "The Nexus Generation",
+      "kind": "source-node",
+      "repo": "https://github.com/machackabook/The-Nexus-Generation",
+      "capabilities": [
+        "public-source"
+      ],
+      "direct_write": false,
+      "auth": "github-authenticated-adapter"
+    },
+    {
+      "id": "nexus-gemini",
+      "label": "The NexusGemini V1",
+      "kind": "source-node",
+      "repo": "https://github.com/machackabook/The-NexusGemini-V1",
+      "capabilities": [
+        "gemini-cli",
+        "github-action",
+        "examples"
+      ],
+      "direct_write": false,
+      "auth": "github-authenticated-adapter"
+    },
+    {
+      "id": "gaiasiris",
+      "label": "GAIASiris",
+      "kind": "source-node",
+      "repo": "https://github.com/machackabook/GAIASiris",
+      "capabilities": [
+        "python",
+        "iris",
+        "assets"
+      ],
+      "direct_write": false,
+      "auth": "github-authenticated-adapter"
+    },
+    {
+      "id": "repo-sync",
+      "label": "Nexus Repo Sync",
+      "kind": "source-node",
+      "repo": "https://github.com/machackabook/nexus-repo-sync",
+      "capabilities": [
+        "repo-sync",
+        "config",
+        "scripts"
+      ],
+      "direct_write": false,
+      "auth": "github-authenticated-adapter"
+    },
+    {
+      "id": "axs",
+      "label": "AXS // Authenticated Loopback PTY",
+      "kind": "local-only-interface",
+      "interface_url": "./panel.html?module=axs",
+      "embed": true,
+      "local_only": true,
+      "capabilities": [
+        "loopback-websocket",
+        "authenticated-pty",
+        "persistent-session",
+        "metadata-telemetry"
+      ],
+      "direct_write": true,
+      "auth": "local-process-token-required"
+    },
+    {
+      "id": "identity",
+      "label": "Cryptic SSH Identity // HULE-LACE",
+      "kind": "local-only-interface",
+      "interface_url": "./panel.html?module=identity",
+      "embed": true,
+      "local_only": true,
+      "capabilities": [
+        "public-key-normalization",
+        "fingerprint-check",
+        "hule-lace-presentation"
+      ],
+      "direct_write": false,
+      "auth": "local-browser-processing"
+    }
+  ]
+}

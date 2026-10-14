@@ -1,0 +1,122 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile, access } from 'node:fs/promises';
+
+const read = p => readFile(new URL('../' + p, import.meta.url), 'utf8');
+
+test('public entry has restrictive CSP, no external script dependency, and keyboard bypass', async () => {
+  const html = await read('index.html');
+  assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /script-src 'self'/);
+  assert.match(html, /object-src 'none'/);
+  assert.match(html, /base-uri 'self'/);
+  assert.match(html, /href="#snapGrid">Skip to command dashboard/);
+  const scriptSources = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)/gi)].map(m => m[1]);
+  assert.ok(scriptSources.every(src => !/^https?:/i.test(src)), 'boot scripts must be same-origin');
+  const csp = html.match(/Content-Security-Policy[^>]*content="([^"]+)"/i)?.[1] || '';
+  assert.ok(!/localhost:\*/i.test(csp), 'local connections must not allow every port');
+});
+
+test('published response headers and crawler policy make boundaries explicit', async () => {
+  const headers = await read('_headers');
+  const robots = await read('robots.txt');
+  const policy = JSON.parse(await read('.well-known/ai-access-policy.json'));
+  assert.match(headers, /X-Content-Type-Options:\s*nosniff/i);
+  assert.match(headers, /Referrer-Policy:\s*no-referrer/i);
+  assert.match(headers, /frame-ancestors 'none'/i);
+  assert.match(headers, /X-Robots-Tag:\s*noindex/i);
+  assert.match(robots, /User-agent:\s*GPTBot[\s\S]*?Disallow:\s*\//i);
+  assert.equal(policy.ai_access.default, 'denied');
+  assert.match(policy.notice, /not an authentication protocol/i);
+});
+
+test('dashboard structure, panel controls, AXS, and identity modules are wired in source', async () => {
+  const html = await read('index.html');
+  const js = await read('ui/dashboard.js');
+  const ids = new Set([...html.matchAll(/\\bid="([^"]+)"/g)].map(m => m[1]));
+  for (const id of ['visualizerLayer','dashboardFx','snapGrid','overlayLayer','guardianLayer']) assert.ok(ids.has(id), 'missing dashboard host '+id);
+  assert.match(js,/data-panel="ghost"/);
+  assert.match(js,/data-panel="collapse"/);
+  assert.match(js,/data-panel="hide"/);
+  assert.match(js,/data-panel="duplicate"/);
+  assert.match(js,/data-panel="pop"/);
+  assert.match(js,/Pop-up blocked; opened an in-page panel instead/);
+  assert.match(js,/dashboard could not initialize/);
+  const manifest=JSON.parse(await read('modules/manifest.json'));
+  assert.ok(manifest.modules.some(m=>m.id==='axs'&&m.file==='./modules/axs.html'&&m.controller==='./modules/axs.js'));
+  assert.ok(manifest.modules.some(m=>m.id==='identity'&&m.file==='./modules/identity.html'&&m.controller==='./modules/identity.js'));
+  const axs=await read('modules/axs.js');
+  assert.match(axs,/loopbackEndpoint/);
+  assert.match(axs,/auth/);
+  assert.match(axs,/session\\.terminate/);
+  assert.match(axs,/tokenInput\\.value=''/);
+  const identity=await read('modules/identity.js');
+  assert.match(identity,/PRIVATE_KEY_BLOCKED/);
+  assert.match(identity,/missing_bytes_invented:false/);
+  assert.match(identity,/identityFingerprintClip/);
+});
+
+test('every manifest module asset and controller exists in the published tree', async () => {
+  const manifest = JSON.parse(await read('modules/manifest.json'));
+  assert.ok(manifest.modules.length >= 10);
+  const paths = new Set();
+  for (const mod of manifest.modules) {
+    assert.ok(mod.id && mod.file, 'module has id and file');
+    assert.ok(!paths.has(mod.id), 'duplicate module id ' + mod.id);
+    paths.add(mod.id);
+    await access(new URL('../' + mod.file.replace(/^\.\//, ''), import.meta.url));
+    if (mod.controller) await access(new URL('../' + mod.controller.replace(/^\.\//, ''), import.meta.url));
+  }
+  const panel = await read('ui/panel.js');
+  assert.match(panel, /manifest\.modules\.find/);
+  assert.match(panel, /closePanel/);
+});
+
+test('runtime does not expose synthetic verification claims or persist token/raw intent payloads', async () => {
+  const core = await read('core/terminal-core.js');
+  assert.ok(!core.includes('AAAAC3NzaC1lZDI1NTE5AAAAIGteDQk53+YlXIALXcls03EZ3B7IXdgYr+knG5dYZuUt'));
+  assert.ok(!core.includes('SOVEREIGN CONTINUITY VERIFIED'));
+  assert.ok(!core.includes('14/14 checks passed'));
+  assert.ok(!core.includes('720 nodes, Sigma throughput'));
+  assert.ok(!core.includes("sessionStorage.setItem('cryptic.runtime.tokens'"));
+  assert.match(core, /const escaped=String\(text\)\.replace/);
+  assert.match(core, /const allowed=new Set/);
+  assert.match(core, /BLOCKED_MISSING_PRODUCTION_EVIDENCE/);
+});
+
+
+test('standalone public interfaces use same-origin scripts and explicit no-index CSP', async () => {
+  const pages = [
+    'aurora-singularity-stack','d3-multi-ai-consensus','enhanced-skybox-7-galaxies',
+    'gemini-multimodal-embedding','genie-djinn','matrix-engine','nexus-irc-hub',
+    'pdf-document-corpus','pnt-hardware-matrix','polyglot-quine-shell',
+    'polyneuromorphic-live-voice','tdoc-sentinel-v11','welcome-sentience'
+  ];
+  for (const name of pages) {
+    const html=await read('interfaces/'+name+'.html');
+    assert.match(html,/Content-Security-Policy/i,'missing CSP: '+name);
+    assert.match(html,/name="robots" content="noindex/i,'missing no-index request: '+name);
+    assert.doesNotMatch(html,/<script\s*>[\s\S]*?<\/script>/i,'executable inline script remains: '+name);
+    assert.doesNotMatch(html,/\s(onclick|oninput|onsubmit|onchange|onerror|onload)\s*=/i,'inline event handler remains: '+name);
+    const scripts=[...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)/gi)].map(m=>m[1]);
+    assert.ok(scripts.length>0,'no externalized controller is referenced: '+name);
+    for(const src of scripts) {
+      assert.ok(!/^https?:/i.test(src),'external script source: '+name+' -> '+src);
+      await access(new URL('../interfaces/'+src.replace(/^\.\//,''),import.meta.url));
+    }
+  }
+});
+
+test('AXS and identity launch remain local-only and stale device fingerprint is absent', async () => {
+  const nodes=JSON.parse(await read('config/nodes.public.json'));
+  const axs=nodes.nodes.find(n=>n.id==='axs');
+  const identity=nodes.nodes.find(n=>n.id==='identity');
+  assert.equal(axs?.local_only,true);
+  assert.equal(identity?.local_only,true);
+  assert.equal(axs?.interface_url,'./panel.html?module=axs');
+  assert.equal(identity?.interface_url,'./panel.html?module=identity');
+  assert.ok(!JSON.stringify(nodes).includes('hL7eW_2OzY3RWLWerrIdfYJ38eKCNizHY2m7U+Ufhmg'));
+  const runtime=await read('cryptic-runtime.js');
+  assert.match(runtime,/node\.local_only===true/);
+  assert.match(runtime,/LOCAL_ORIGIN_REJECTED/);
+});
