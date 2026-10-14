@@ -5,12 +5,8 @@ import { useCryptic } from '../../store/crypticContext';
 export const AXSModule: React.FC = () => {
   const { mintToken } = useCryptic();
   const [ptyOutput, setPtyOutput] = useState<string[]>([
-    'AXS Loopback PTY v0.9.2 attached to loopback socket 127.0.0.1:7331',
-    'Session Token: loopback.authenticated.token.verified',
-    'pty> termux-exec node --version',
-    'v22.14.0',
-    'pty> uptime',
-    '12:45:16 up 14 days, 2 user, load average: 0.12, 0.08, 0.05',
+    'AXS loopback adapter is not connected.',
+    'No PTY output is available until an authenticated local adapter is explicitly configured.',
   ]);
   const [ptyInput, setPtyInput] = useState('');
 
@@ -19,11 +15,11 @@ export const AXSModule: React.FC = () => {
     if (!ptyInput.trim()) return;
     const cmd = ptyInput.trim();
     setPtyInput('');
-    const t = await mintToken('axs.pty.exec', { cmd });
+    const t = await mintToken('axs.pty.request', { commandLength: cmd.length });
     setPtyOutput((prev) => [
       ...prev,
-      `pty> ${cmd}`,
-      `[AXS RECEIPT ${t.fp}] Loopback execution isolated. Output verified.`,
+      `request> ${cmd}`,
+      `[AXS RECEIPT ${t.fp}] Request recorded locally. No PTY command was executed.`,
     ]);
   };
 
@@ -33,8 +29,8 @@ export const AXSModule: React.FC = () => {
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-[#74ff9b]" />
           <div>
-            <div className="font-bold text-white text-[11px]">AXS // AUTHENTICATED LOOPBACK PTY</div>
-            <div className="text-[9px] text-[#8aa0b6]">Loopback WebSocket PTY · Termux / ARM64 Runtime</div>
+            <div className="font-bold text-white text-[11px]">AXS // LOOPBACK PTY REQUEST QUEUE</div>
+            <div className="text-[9px] text-[#8aa0b6]">No adapter connected · local requests only</div>
           </div>
         </div>
         <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
@@ -55,7 +51,7 @@ export const AXSModule: React.FC = () => {
           type="text"
           value={ptyInput}
           onChange={(e) => setPtyInput(e.target.value)}
-          placeholder="AXS PTY command..."
+          placeholder="Record a local request..."
           className="flex-1 bg-[#061426] border border-[#42f5ff]/30 rounded px-2.5 py-1 text-[10px] text-white focus:outline-none focus:border-[#42f5ff]"
         />
         <button

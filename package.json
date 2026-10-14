@@ -4,13 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev": "vite --host 127.0.0.1 --port 3000",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "lint": "tsc --noEmit"
+    "preview": "vite preview --host 127.0.0.1 --port 3000",
+    "lint": "tsc --noEmit",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "check:security": "npm run lint && node scripts/verify.mjs && node scripts/pages-security-audit.mjs --local-only",
+    "test:security": "node --test tests/security.test.mjs tests/security-hardening.test.mjs",
+    "test": "npm run test:security",
+    "test:audit": "node scripts/pages-security-audit.mjs --local-only"
   },
   "dependencies": {
-    "express": "^4.21.2",
     "lucide-react": "^1.57.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

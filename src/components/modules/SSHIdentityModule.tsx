@@ -5,21 +5,29 @@ import { KeyRound, Shield, Check, Copy } from 'lucide-react';
 export const SSHIdentityModule: React.FC = () => {
   const { mintToken, addLedger } = useCryptic();
   const [pubKey, setPubKey] = useState(
-    'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH9a508N1s8Zq3X9b7kF7f3V7e9p21qR8yU9t7Z4k1aB sovereign-operator@cryptic'
+    ''
   );
-  const [normalizedFp, setNormalizedFp] = useState<string>('SHA256:7f9a21b34e8912cde489b01fa239');
+  const [normalizedFp, setNormalizedFp] = useState<string>('NOT_COMPUTED');
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
+    if (!pubKey.trim()) return;
     navigator.clipboard?.writeText(pubKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
   const handleRecompute = async () => {
-    const t = await mintToken('ssh.identity.check');
-    addLedger('ssh.identity.verified', { fp: t.fp });
-    setNormalizedFp(`SHA256:${t.fp}${Date.now().toString(16).slice(-6)}`);
+    const normalized = pubKey.trim();
+    if (!normalized) {
+      setNormalizedFp('ENTER A PUBLIC KEY TO COMPUTE');
+      return;
+    }
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized));
+    const keyFingerprint = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    const t = await mintToken('ssh.identity.check', { keyLength: normalized.length });
+    addLedger('ssh.identity.checked', { keyFingerprint, fp: t.fp });
+    setNormalizedFp(`SHA256:${keyFingerprint}`);
   };
 
   return (
@@ -32,7 +40,7 @@ export const SSHIdentityModule: React.FC = () => {
             <div className="text-[9px] text-[#8aa0b6]">Local Ed25519 / P-256 Key Normalization &amp; Proofs</div>
           </div>
         </div>
-        <span className="text-[9px] text-[#74ff9b] font-bold">LOCAL PROOF</span>
+        <span className="text-[9px] text-[#74ff9b] font-bold">REFERENCE INPUT ONLY</span>
       </div>
 
       <div className="space-y-1">

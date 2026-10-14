@@ -14,6 +14,18 @@ import {
   IRCMessage,
 } from '../types';
 
+const PRIVATE_LEDGER_FIELDS = /intent|wish|prompt|command|message|seed|token|secret|password|credential|private|location|latitude|longitude/i;
+const sanitizeLedgerData = (data: Record<string, any> = {}): Record<string, string | number | boolean | null> => Object.fromEntries(
+  Object.entries(data)
+    .filter(([key]) => !PRIVATE_LEDGER_FIELDS.test(key))
+    .map(([key, value]) => [
+      key.slice(0, 64),
+      typeof value === 'string' ? value.slice(0, 256) :
+      typeof value === 'number' && Number.isFinite(value) ? value :
+      typeof value === 'boolean' ? value : null,
+    ])
+);
+
 interface CrypticContextType {
   // Gate
   gateOpen: boolean;
@@ -338,7 +350,7 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const record: LedgerRecord = {
       ts: new Date().toISOString(),
       event: event.slice(0, 120),
-      data: data,
+      data: sanitizeLedgerData(data),
     };
     setLedgerRecords(prev => {
       const updated = [...prev, record];
