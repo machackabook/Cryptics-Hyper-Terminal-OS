@@ -67,3 +67,9 @@ npm run preview
 ```
 
 © 2026 Cryptic News LLC. All rights reserved.
+
+## Chromebook ↔ Samsung A15 — Nexus SSH Mesh (review branch)
+
+[Operator runbook and safety requirements](docs/NEXUS-SSH-ALPHA-OPERATIONS.md) · [SSH/ADB command-line controller](scripts/nexus-mesh.sh) · [Local alpha math kernels](runtime/alpha-fabric.mjs)
+
+This change is a **draft source implementation**, not an online tunnel, root-enabled phone, live Chromebook-to-A15 session, or authenticated gateway. It requires manual key/fingerprint verification and pairing. It intentionally does not expose the Termux filesystem through the public page URL.

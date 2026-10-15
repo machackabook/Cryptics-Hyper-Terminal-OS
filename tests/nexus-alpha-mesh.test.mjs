@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {softThreshold,alphaComposite,complexWave,sparseIsta,kompressor,tensalltensions,hatchetchopman} from '../runtime/alpha-fabric.mjs';
+import {VIRTUAL_ROOT,checkedVirtualPath,parentVirtualPath,childVirtualPath} from '../runtime/nexus-path-policy.mjs';
+test('regularization shrinkage',()=>{assert.equal(softThreshold(-3,1),-2);assert.equal(softThreshold(0.2,0.3),0);});
+test('raster alpha compositing',()=>{assert.deepEqual(alphaComposite([1,0,0],[0,0,1],0.25),[.25,0,.75]);});
+test('complex phase and transmission',()=>{const v=complexWave(2,Math.PI/2,.5);assert.ok(Math.abs(v.real)<1e-9);assert.ok(Math.abs(v.imag-1)<1e-9);});
+test('sparse ISTA assumes identity Psi',()=>{const r=sparseIsta([[1,0],[0,1]],[3,.2],.5,{iterations:100});assert.ok(Math.abs(r.coefficients[0]-2.5)<1e-6);assert.equal(r.coefficients[1],0);assert.equal(r.algorithm,'ISTA_PSI_IDENTITY');});
+test('lossy quantizer reports error',()=>{const r=kompressor([0,.5,1],4);assert.deepEqual(r.quantized,[0,8,15]);assert.ok(r.mse<.001);});
+test('edge load and tiled pruning',()=>{assert.equal(tensalltensions([[0,1],[0,0]]).maxEdgeLoad,1);assert.equal(hatchetchopman([.0001,1,-2],{tileSize:2,epsilon:.001}).removed,1);});
+test('reject invalid domain inputs',()=>{assert.throws(()=>alphaComposite([1,2,3],[0,0,0],.5));assert.throws(()=>sparseIsta([[0]],[1],1));assert.throws(()=>complexWave(1,0,2));});
+test('parent path never leaves export root',()=>{const child=childVirtualPath(VIRTUAL_ROOT,'docs');assert.equal(parentVirtualPath(child),VIRTUAL_ROOT);assert.equal(parentVirtualPath(VIRTUAL_ROOT),VIRTUAL_ROOT);assert.deepEqual(checkedVirtualPath(child),['docs']);});
+test('refuse traversal, escaped traversal and public URLs',()=>{for(const p of ['https://machackabook.github.io/Cryptic/../../',VIRTUAL_ROOT+'/..',VIRTUAL_ROOT+'/%2e%2e',VIRTUAL_ROOT+'/ok/../bad',VIRTUAL_ROOT+'/a%252fb'])assert.throws(()=>checkedVirtualPath(p));});
