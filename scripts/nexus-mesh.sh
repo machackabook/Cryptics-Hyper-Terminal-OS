@@ -14,7 +14,12 @@ while (($#)); do
  *) fail "Unexpected argument $1";;
  esac
 done
-private_ip(){ [[ "$1" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] && [[ "$1" == 10.* || "$1" == 192.168.* || "$1" == 172.1[6-9].* || "$1" == 172.2[0-9].* || "$1" == 172.3[01].* ]]; }
+private_ip(){
+ [[ "$1" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || return 1
+ local a b c d n; IFS=. read -r a b c d <<< "$1"
+ for n in "$a" "$b" "$c" "$d"; do ((10#$n<=255)) || return 1; done
+ [[ "$1" == 10.* || "$1" == 192.168.* || "$1" == 172.1[6-9].* || "$1" == 172.2[0-9].* || "$1" == 172.3[01].* ]]
+}
 phone(){ [[ -n "$(printenv PREFIX 2>/dev/null || :)" ]] || fail 'Run from Termux'; }
 controller(){ [[ -z "$(printenv PREFIX 2>/dev/null || :)" ]] || fail 'Run from Chromebook Linux'; }
 need(){ command -v "$1" >/dev/null || fail "Install $1 explicitly first"; }
@@ -28,7 +33,7 @@ Phone: pkg install openssh; bash nexus-mesh.sh phone-init
 Phone: bash nexus-mesh.sh phone-authorize (paste Chromebook PUBLIC key)
 Phone: bash nexus-mesh.sh phone-start --ip 192.168.X.Y
 Phone: bash nexus-mesh.sh phone-stop
-Chromebook: bash nexus-mesh.sh controller-init --ip 192.168.X.Y --user <Termux whoami>
+Chromebook: bash nexus-mesh.sh chromebook-init --ip 192.168.X.Y --user <Termux whoami>
 Chromebook: bash nexus-mesh.sh pubkey
 Chromebook: bash nexus-mesh.sh connect | verify | mount | unmount | pull
 Chromebook: bash nexus-mesh.sh adb-pair --target PRIVATE_IP:PAIR_PORT
@@ -76,7 +81,7 @@ phone-stop)
  [[ "$(ps -p "$p" -o args= 2>/dev/null || :)" == *sshd* ]] || fail 'Not managed sshd'
  kill "$p"; rm -f "$pid"
  ;;
-controller-init)
+chromebook-init)
  controller; private_ip "$ip" || fail 'Requires private phone Wi-Fi IP'
  [[ "$remote_user" =~ ^[A-Za-z0-9._-]{2,64}$ ]] || fail 'Requires Termux --user'
  need ssh-keygen; need ssh
