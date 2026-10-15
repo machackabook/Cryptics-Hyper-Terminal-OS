@@ -1,0 +1,33 @@
+name: Nexus SSH Alpha source proof
+on:
+  push:
+    paths:
+      - 'scripts/nexus-mesh.sh'
+      - 'runtime/alpha-fabric.mjs'
+      - 'runtime/nexus-path-policy.mjs'
+      - 'tests/nexus-alpha-mesh.test.mjs'
+      - '.github/workflows/nexus-ssh-alpha.yml'
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  source-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check shell syntax
+        run: bash -n scripts/nexus-mesh.sh
+      - name: Check operator help
+        run: bash scripts/nexus-mesh.sh --help
+      - name: Run isolated mathematical and path-boundary tests
+        run: node --test tests/nexus-alpha-mesh.test.mjs
+      - name: Verify no key-like files in proposed paths
+        shell: bash
+        run: |
+          if find runtime scripts tests -type f \( -name '*.pem' -o -name '*.key' -o -name 'id_ed25519' \) | grep -q .; then
+            echo 'Blocked credential-like file in working tree'
+            exit 1
+          fi
