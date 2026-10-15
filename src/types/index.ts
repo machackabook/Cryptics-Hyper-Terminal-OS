@@ -14,7 +14,10 @@ export type ModuleId =
   | 'documents'
   | 'telemetry'
   | 'identity'
-  | 'axs';
+  | 'axs'
+  | 'enclaves'
+  | 'extensions'
+  | 'alpha-hologram';
 
 export interface ModuleDefinition {
   id: ModuleId;
@@ -155,3 +158,62 @@ export interface IRCMessage {
   text: string;
   verified: boolean;
 }
+
+// Governing Enclave Definition
+export interface EnclaveRecord {
+  id: string;
+  name: string;
+  hop: number;
+  numeral: string;
+  status: 'ACTIVE' | 'ISOLATED' | 'SYNCHRONIZED' | 'LOCKED';
+  attestationType: 'Ed25519-TEE' | 'SGX-Enclave' | 'WebCrypto-SE' | 'Air-Gap-Local';
+  hash: string;
+  lastStamp: string;
+  governingPolicy: string;
+}
+
+// Mountable DMG & System Images
+export interface MountableImage {
+  id: string;
+  filename: string;
+  label: string;
+  format: 'DMG' | 'ISO' | 'RAW' | 'SPARSEIMAGE';
+  sizeBytes: number;
+  sizeFormatted: string;
+  mountPoint: string;
+  mounted: boolean;
+  checksumSha256: string;
+  filesystem: 'APFS' | 'ext4' | 'ZFS-Sovereign' | 'HFS+';
+  filesCount: number;
+}
+
+// Modular Extension Plugin
+export interface ExtensionPlugin {
+  id: string;
+  name: string;
+  version: string;
+  category: 'mesh' | 'compute' | 'hardware' | 'ai' | 'security';
+  description: string;
+  author: string;
+  installed: boolean;
+  enabled: boolean;
+  stars: number;
+  runtime: 'WASM' | 'Worker' | 'Native-Bridge' | 'MCP-Server';
+}
+
+// Model Context Protocol (MCP) Tool
+export interface MCPToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, string>;
+  category: 'read' | 'exec' | 'crypto' | 'geospatial';
+}
+
+// Chrome Flag Configuration
+export interface ChromeFlagOption {
+  flag: string;
+  description: string;
+  enabled: boolean;
+  category: 'gpu' | 'audio' | 'crypto' | 'network';
+}
+

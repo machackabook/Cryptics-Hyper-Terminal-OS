@@ -17,6 +17,9 @@ import { DocumentCorpusModule } from './modules/DocumentCorpusModule';
 import { TelemetryModule } from './modules/TelemetryModule';
 import { SSHIdentityModule } from './modules/SSHIdentityModule';
 import { AXSModule } from './modules/AXSModule';
+import { EnclavesStorageModule } from './modules/EnclavesStorageModule';
+import { ExtensionsMCPModule } from './modules/ExtensionsMCPModule';
+import { AlphaHologramCompressorModule } from './modules/AlphaHologramCompressorModule';
 
 const SNAP = 12;
 const snapVal = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -92,6 +95,12 @@ export const SnapGrid: React.FC = () => {
         return <SSHIdentityModule />;
       case 'axs':
         return <AXSModule />;
+      case 'enclaves':
+        return <EnclavesStorageModule />;
+      case 'extensions':
+        return <ExtensionsMCPModule />;
+      case 'alpha-hologram':
+        return <AlphaHologramCompressorModule />;
       default:
         return <TerminalModule />;
     }

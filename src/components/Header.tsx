@@ -18,6 +18,10 @@ import {
   Copy,
   Check,
   Compass,
+  HardDrive,
+  Boxes,
+  Shield,
+  Cpu,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -76,6 +80,9 @@ export const Header: React.FC = () => {
     { id: 'telemetry', label: 'Browser Telemetry', icon: Activity },
     { id: 'identity', label: 'SSH Identity Lace', icon: Lock },
     { id: 'axs', label: 'AXS Loopback PTY', icon: Terminal },
+    { id: 'enclaves', label: 'Enclaves & Mountable DMG', icon: HardDrive },
+    { id: 'extensions', label: 'Extensions & MCP Hub', icon: Boxes },
+    { id: 'alpha-hologram', label: 'Alpha & Hologram Synthesizer', icon: Cpu },
   ];
 
   return (

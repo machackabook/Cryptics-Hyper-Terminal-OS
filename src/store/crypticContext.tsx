@@ -18,8 +18,9 @@ import {
 interface CrypticContextType {
   // Gate & Authentication Session
   gateOpen: boolean;
+  setGateOpen: React.Dispatch<React.SetStateAction<boolean>>;
   session: UserSession | null;
-  verifySessionAndEnterGateway: (callsign?: string, passkey?: string) => Promise<{ success: boolean; session: UserSession; token: CrypticToken }>;
+  verifySessionAndEnterGateway: (callsign?: string, passkey?: string, autoOpenGate?: boolean) => Promise<{ success: boolean; session: UserSession; token: CrypticToken }>;
   enterGate: () => Promise<CrypticToken>;
   showGate: () => void;
   logoutSession: () => void;
@@ -456,7 +457,8 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const verifySessionAndEnterGateway = useCallback(
     async (
       callsign = 'SOVEREIGN-OPERATOR',
-      passkey = ''
+      passkey = '',
+      autoOpenGate = true
     ): Promise<{ success: boolean; session: UserSession; token: CrypticToken }> => {
       let token: CrypticToken;
       const cleanCallsign = (callsign || 'SOVEREIGN-OPERATOR').trim().toUpperCase();
@@ -485,7 +487,9 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       setSession(newSession);
-      setGateOpen(true);
+      if (autoOpenGate) {
+        setGateOpen(true);
+      }
 
       try {
         localStorage.setItem('cryptic.session.v1', JSON.stringify(newSession));
@@ -569,14 +573,32 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Create new panel instance
       maxZIndex.current += 1;
       const count = prev.filter(p => p.moduleId === moduleId).length;
+      let title = `${moduleId.toUpperCase()} // MODULE INSTANCE`;
+      let w = 560;
+      let h = 420;
+
+      if (moduleId === 'enclaves') {
+        title = 'GOVERNING ENCLAVES & MOUNTABLE STORAGE (CONTINUUM 137451921129154222)';
+        w = 640;
+        h = 490;
+      } else if (moduleId === 'extensions') {
+        title = 'EXTENSIONS & MCP PROTOCOL HUB // ARGON & SPARK & OLLAMA';
+        w = 640;
+        h = 490;
+      } else if (moduleId === 'alpha-hologram') {
+        title = 'ALPHA & HOLOGRAM SYNTHESIZER // SPARSE IMAGING & CGH';
+        w = 680;
+        h = 520;
+      }
+
       const newPanel: PanelInstanceState = {
         id: `panel-${moduleId}-${count + 1}`,
         moduleId,
-        title: `${moduleId.toUpperCase()} // MODULE INSTANCE`,
+        title,
         x: 80 + (prev.length * 28) % 320,
         y: 80 + (prev.length * 24) % 260,
-        w: 560,
-        h: 420,
+        w,
+        h,
         zIndex: maxZIndex.current,
         collapsed: false,
         ghost: false,
@@ -753,8 +775,10 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
   gaia verify | gaia init | gaia status | gaia evolve | matrix
   embed <query> | embed cosine (gemini-embedding-2-preview)
   sentinel verify | sentinel quine | sentinel audit
-  galaxies warp | galaxies status | voice | quine | aurora | irc <msg>
   docs [search] | nodes | axs | identity | bridge status
+  enclaves | dmg (mount) | prime [n] | drive (/drive)
+  extensions | argon | spark | geminicli | mcp | ollama (/ollama) | chrome
+  alpha | hologram | kompressor | tensall | hatchet
   963 on|off | field on|off | guardian`;
       addTerminalLine(helpText, 'good');
       return;
@@ -963,6 +987,83 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    if (lower === 'enclave' || lower === 'enclaves') {
+      openModule('enclaves');
+      addTerminalLine('[GOVERNING ENCLAVES] Opened Enclaves & Mountable Storage panel. 6 governing enclaves synchronized.', 'good');
+      return;
+    }
+
+    if (lower === 'dmg' || lower === 'mount') {
+      openModule('enclaves');
+      addTerminalLine('[MOUNTABLE STORAGE] 4 system images available (/Volumes/CrypticHyperTerminal mounted).', 'good');
+      return;
+    }
+
+    if (lower === 'prime' || lower === 'computational') {
+      openModule('enclaves');
+      const val = args[0] || '137451921129154222';
+      addTerminalLine(`[HIGH PRIME COMPUTATIONAL] Running Miller-Rabin test for n=${val} via BigInt kernel. See Enclaves Storage panel.`, 'good');
+      return;
+    }
+
+    if (lower === 'drive' || lower === '/drive') {
+      openModule('enclaves');
+      addTerminalLine('[GOOGLE DRIVE ENCLAVE] Continuum index CONTINUUM-ENCLAVE-137451921129154222 (ID 1Ohp6ZMX02NvFayJfivgXbP4PUMztYUvU) connected.', 'good');
+      return;
+    }
+
+    if (lower === 'extensions' || lower === 'plugins' || lower === 'repo') {
+      openModule('extensions');
+      addTerminalLine('[EXTENSIONS REPO] Opened Modular Extensions Hub with 9 sovereign plugins.', 'good');
+      return;
+    }
+
+    if (lower === 'argon') {
+      const t = await mintToken('argon.optimization');
+      openModule('extensions');
+      addTerminalLine(`[ARGON TRAFFIC] Autonomous heuristic optimization triggered: Incident #inc-02 bypassed. Receipt ${t.fp}`, 'good', t.fp);
+      return;
+    }
+
+    if (lower === 'spark') {
+      const t = await mintToken('spark.tensor.folding');
+      openModule('extensions');
+      addTerminalLine(`[SPARK STREAM] Folded 18,450 telemetry packets into sliding-window tensor. Receipt ${t.fp}`, 'good', t.fp);
+      return;
+    }
+
+    if (lower === 'geminicli') {
+      openModule('extensions');
+      addTerminalLine('[GEMINICLI] Local proxy console activated in Extensions & MCP Hub.', 'ai');
+      return;
+    }
+
+    if (lower === 'mcp') {
+      openModule('extensions');
+      addTerminalLine('[MCP SERVER] Model Context Protocol JSON-RPC 2.0 active at mcp://127.0.0.1:7331/sse.', 'good');
+      return;
+    }
+
+    if (lower === 'ollama' || lower === '/ollama') {
+      const prompt = args.join(' ') || 'Offline anomaly check';
+      const t = await mintToken('ollama.inference');
+      openModule('extensions');
+      addTerminalLine(`[OLLAMA OFFLINE LLM] Query: "${prompt}" -> Local inference complete. Zero external network transfer. Receipt ${t.fp}`, 'ai', t.fp);
+      return;
+    }
+
+    if (lower === 'chrome' || lower === 'flags') {
+      openModule('extensions');
+      addTerminalLine('[CHROME FLAGS] Flags: --enable-unsafe-webgpu --enable-features=WebBluetooth,WebMIDI --flag-switches-begin. Check capabilities.', 'good');
+      return;
+    }
+
+    if (lower === 'alpha' || lower === 'hologram' || lower === 'kompressor' || lower === 'tensall' || lower === 'hatchet') {
+      openModule('alpha-hologram');
+      addTerminalLine(`[ALPHA & HOLOGRAM] Opened Alpha Pipeline Synthesizer for "${lower}" (Sparse imaging objective min 0.5||Ax-y||_2^2 + alpha||Psi x||_1 & CGH wavefields).`, 'good');
+      return;
+    }
+
     addTerminalLine(`Unknown command: "${cmd}". Type "help" for command matrix.`, 'warn');
   }, [
     addTerminalLine,
@@ -991,6 +1092,7 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
     <CrypticContext.Provider
       value={{
         gateOpen,
+        setGateOpen,
         session,
         verifySessionAndEnterGateway,
         enterGate,

@@ -4,6 +4,7 @@ import { CosmicGuardian } from './components/CosmicGuardian';
 import { Header } from './components/Header';
 import { SnapGrid } from './components/SnapGrid';
 import { MagicWindow3D } from './components/MagicWindow3D';
+import { PersistentBackgroundFX } from './components/PersistentBackgroundFX';
 import { InteractiveGlobeModule } from './components/modules/InteractiveGlobeModule';
 import { GalaxiesSkyboxModule } from './components/modules/GalaxiesSkyboxModule';
 import { Activity, Radio, Shield, Globe, Terminal, Sparkles } from 'lucide-react';
@@ -15,6 +16,9 @@ const MainLayout: React.FC = () => {
     <div className="relative w-screen h-screen overflow-hidden bg-[#02050b] text-[#e2f1ff] select-none font-mono">
       {/* 3D Celestial Starfield Canvas Background */}
       <MagicWindow3D interactive={viewMode === 'magic'} />
+
+      {/* Persistent Framer-Motion Background Visual Effect */}
+      <PersistentBackgroundFX />
 
       {/* Cyberpunk Grid Background Lines */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0a1e36]/30 via-transparent to-transparent pointer-events-none z-0" />
