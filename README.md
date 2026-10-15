@@ -1,5 +1,8 @@
 # Cryptic // HyperTerminal Sovereign OS (React SPA)
 
+**Public Cryptic landing page:** [Open Cryptic landing page](https://machackabook.github.io/Cryptic/)
+
+
 **The HyperTerminal Sovereign Operating System** — rewritten as a high-performance, modular React SPA on Vite, TypeScript, Tailwind CSS, and Three.js.
 
 Numeral remembered: `137451921129154222`. Continuity receipt: `docs/LEDGER-STAMP.md`.
