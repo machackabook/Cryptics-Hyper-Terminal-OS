@@ -125,6 +125,7 @@ unmount)
 pull) controller; need scp; mkdir -p "$HOME/Nexus/inbox"; scp -r 'nexus-a15:nexus_exchange' "$HOME/Nexus/inbox/";;
 adb-pair|adb-connect|adb-disconnect)
  controller; need adb
+ [[ "$target" =~ ^[0-9.]+:[0-9]{2,5}$ ]] || fail 'ADB target must be ip:port'
  addr="$(printf '%s' "$target" | cut -d: -f1)"
  port="$(printf '%s' "$target" | cut -d: -f2)"
  private_ip "$addr" || fail 'Only private LAN ADB endpoint'
