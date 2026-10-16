@@ -779,6 +779,7 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
   enclaves | dmg (mount) | prime [n] | drive (/drive)
   extensions | argon | spark | geminicli | mcp | ollama (/ollama) | chrome
   alpha | hologram | kompressor | tensall | hatchet
+  antigravity | adb [connect IP] | ota | geminicli | tunnel
   963 on|off | field on|off | guardian`;
       addTerminalLine(helpText, 'good');
       return;
@@ -954,6 +955,46 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (lower === 'nodes') {
       openModule('nodes');
       addTerminalLine('[PUBLIC NODES] 22 sovereign network nodes listed in Node Surface module.', 'system');
+      return;
+    }
+
+    if (lower === 'antigravity') {
+      const action = args[0]?.toLowerCase() || 'status';
+      openModule('antigravity');
+      if (action === 'cli' || action === 'run') {
+        addTerminalLine('[ANTIGRAVITY CLI] Python SDK executing script buffers. Agent middleware active with 6k node swarm defense against CVE/XSS.', 'good');
+      } else {
+        addTerminalLine('[ANTIGRAVITY SDK] Python package mapped to /home/azazel/antigravity-sdk-python-main/. MCP bridge and tunnel operational.', 'system');
+      }
+      return;
+    }
+
+    if (lower === 'adb') {
+      const action = args[0]?.toLowerCase() || 'devices';
+      if (action === 'connect') {
+        const target = args[1] || '192.168.1.101:5555';
+        addTerminalLine(`[ADB] Successfully connected to Android wireless debug target at ${target}.`, 'good');
+      } else {
+        addTerminalLine('[ADB DEVICES] Attached Android Targets:\n  * 192.168.1.101:5555 (device) - Android 15 Sovereign Custom ROM', 'system');
+      }
+      openModule('antigravity');
+      return;
+    }
+
+    if (lower === 'ota') {
+      addTerminalLine('[OTA UPDATER] Triggering autonomous over-the-air firmware flash package over integrated tunnel...', 'good');
+      openModule('antigravity');
+      return;
+    }
+
+    if (lower === 'geminicli' || lower === 'gemini-cli') {
+      const query = args.join(' ') || 'Run system self-diagnostic and verify all security enclaves.';
+      addTerminalLine(`[GEMINICLI] Querying local Gemini model wrapper:\n> "${query}"\n[RESULT] Enclaves verified. All vulnerability vectors neutralized.`, 'ai');
+      return;
+    }
+
+    if (lower === 'tunnel') {
+      addTerminalLine('[SECURE TUNNEL] wss://nexus-tunnel.local:9090 active. Zero-trust proxy routing traffic through Harpoon channels.', 'good');
       return;
     }
 

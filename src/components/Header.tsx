@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCryptic } from '../store/crypticContext';
 import { ModuleId } from '../types';
+import { VaultAccess } from './VaultAccess';
 import {
   Terminal,
   Globe,
@@ -22,6 +23,9 @@ import {
   Boxes,
   Shield,
   Cpu,
+  Server,
+  Cloud,
+  Sliders,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -45,6 +49,7 @@ export const Header: React.FC = () => {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
   const [isGhosted, setIsGhosted] = useState(false);
 
   const handleCopyTime = () => {
@@ -83,6 +88,12 @@ export const Header: React.FC = () => {
     { id: 'enclaves', label: 'Enclaves & Mountable DMG', icon: HardDrive },
     { id: 'extensions', label: 'Extensions & MCP Hub', icon: Boxes },
     { id: 'alpha-hologram', label: 'Alpha & Hologram Synthesizer', icon: Cpu },
+    { id: 'mcp-registry', label: 'Searchable MCP Registry', icon: Server },
+    { id: 'antigravity', label: 'Antigravity SDK & ADB/OTA Hub', icon: Cpu },
+    { id: 'telemetry', label: 'Telemetry & 6k Agent Dashboard', icon: Activity },
+    { id: 'architect', label: 'The Architect Control Suite', icon: Lock },
+    { id: 'cloud-storage', label: 'TetherMesh Cloud & SparseBundles', icon: Cloud },
+    { id: 'workspace-configurator', label: 'Workspace Configurator & Layout', icon: Sliders },
   ];
 
   return (
@@ -237,6 +248,15 @@ export const Header: React.FC = () => {
 
         {/* Re-lock threshold */}
         <button
+          onClick={() => setVaultOpen(true)}
+          title="Firebase Vault Access"
+          className="px-2.5 py-1 rounded-lg border border-cyan-500/40 bg-cyan-950/40 text-cyan-300 hover:border-cyan-400 transition cursor-pointer flex items-center space-x-1.5 text-[10px] font-bold"
+        >
+          <Shield className="w-3.5 h-3.5" />
+          <span>Vault Access</span>
+        </button>
+
+        <button
           onClick={showGate}
           title="Engage Guardian Lock"
           className="p-1.5 rounded-lg border border-red-500/30 bg-[#16060c] text-red-400 hover:border-red-500/60 transition cursor-pointer"
@@ -244,6 +264,8 @@ export const Header: React.FC = () => {
           <Lock className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      <VaultAccess isOpen={vaultOpen} onClose={() => setVaultOpen(false)} />
     </header>
   );
 };

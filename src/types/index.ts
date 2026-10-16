@@ -17,7 +17,13 @@ export type ModuleId =
   | 'axs'
   | 'enclaves'
   | 'extensions'
-  | 'alpha-hologram';
+  | 'alpha-hologram'
+  | 'mcp-registry'
+  | 'antigravity'
+  | 'telemetry'
+  | 'architect'
+  | 'cloud-storage'
+  | 'workspace-configurator';
 
 export interface ModuleDefinition {
   id: ModuleId;
@@ -208,6 +214,15 @@ export interface MCPToolDefinition {
   parameters: Record<string, string>;
   category: 'read' | 'exec' | 'crypto' | 'geospatial';
 }
+
+// Model Context Protocol (MCP) Resource
+export interface MCPResource {
+  uri: string;
+  name: string;
+  mimeType: string;
+  description: string;
+}
+
 
 // Chrome Flag Configuration
 export interface ChromeFlagOption {

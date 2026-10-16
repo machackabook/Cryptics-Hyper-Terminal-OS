@@ -20,6 +20,12 @@ import { AXSModule } from './modules/AXSModule';
 import { EnclavesStorageModule } from './modules/EnclavesStorageModule';
 import { ExtensionsMCPModule } from './modules/ExtensionsMCPModule';
 import { AlphaHologramCompressorModule } from './modules/AlphaHologramCompressorModule';
+import { MCPRegistry } from './modules/MCPRegistry';
+import { AntigravityAndroidModule } from './modules/AntigravityAndroidModule';
+import { TelemetryDashboard } from './modules/TelemetryDashboard';
+import { ArchitectDashboard } from './modules/ArchitectDashboard';
+import { CloudStorageDashboard } from './modules/CloudStorageDashboard';
+import { WorkspaceConfigurator } from './modules/WorkspaceConfigurator';
 
 const SNAP = 12;
 const snapVal = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -101,6 +107,18 @@ export const SnapGrid: React.FC = () => {
         return <ExtensionsMCPModule />;
       case 'alpha-hologram':
         return <AlphaHologramCompressorModule />;
+      case 'mcp-registry':
+        return <MCPRegistry />;
+      case 'antigravity':
+        return <AntigravityAndroidModule />;
+      case 'telemetry':
+        return <TelemetryDashboard />;
+      case 'architect':
+        return <ArchitectDashboard />;
+      case 'cloud-storage':
+        return <CloudStorageDashboard />;
+      case 'workspace-configurator':
+        return <WorkspaceConfigurator />;
       default:
         return <TerminalModule />;
     }
