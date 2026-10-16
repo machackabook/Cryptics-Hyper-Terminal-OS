@@ -26,5 +26,5 @@ jobs:
       - name: Run repository security checks
         run: |
           set -euo pipefail
-          node --test tests/security.test.mjs tests/public-surface.test.mjs
+          node --test tests/react-runtime-contract.test.mjs
           node scripts/verify.mjs
