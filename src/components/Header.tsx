@@ -26,6 +26,7 @@ import {
   Server,
   Cloud,
   Sliders,
+  RefreshCw,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -95,6 +96,7 @@ export const Header: React.FC = () => {
     { id: 'cloud-storage', label: 'TetherMesh Cloud & SparseBundles', icon: Cloud },
     { id: 'workspace-configurator', label: 'Workspace Configurator & Layout', icon: Sliders },
     { id: 'network-topology', label: 'Network Topology Map (D3)', icon: Globe },
+    { id: 'terrasphere-sync', label: 'Terrasphere & GitHub Sync', icon: RefreshCw },
   ];
 
   return (

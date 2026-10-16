@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CrypticProvider, useCryptic } from './store/crypticContext';
 import { CosmicGuardian } from './components/CosmicGuardian';
 import { Header } from './components/Header';
@@ -7,10 +7,23 @@ import { MagicWindow3D } from './components/MagicWindow3D';
 import { PersistentBackgroundFX } from './components/PersistentBackgroundFX';
 import { InteractiveGlobeModule } from './components/modules/InteractiveGlobeModule';
 import { GalaxiesSkyboxModule } from './components/modules/GalaxiesSkyboxModule';
+import { CommandPalette } from './components/CommandPalette';
 import { Activity, Radio, Shield, Globe, Terminal, Sparkles } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { gateOpen, viewMode, setViewMode, ledgerRecords, tokens, beacons, incidents, clearUI } = useCryptic();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#02050b] text-[#e2f1ff] select-none font-mono">
@@ -81,6 +94,8 @@ const MainLayout: React.FC = () => {
           </div>
         </footer>
       )}
+
+      <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 };

@@ -27,6 +27,7 @@ import { ArchitectDashboard } from './modules/ArchitectDashboard';
 import { CloudStorageDashboard } from './modules/CloudStorageDashboard';
 import { WorkspaceConfigurator } from './modules/WorkspaceConfigurator';
 import { NetworkTopologyMap } from './modules/NetworkTopologyMap';
+import { TerrasphereGitHubSync } from './modules/TerrasphereGitHubSync';
 
 const SNAP = 12;
 const snapVal = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -122,6 +123,8 @@ export const SnapGrid: React.FC = () => {
         return <WorkspaceConfigurator />;
       case 'network-topology':
         return <NetworkTopologyMap />;
+      case 'terrasphere-sync':
+        return <TerrasphereGitHubSync />;
       default:
         return <TerminalModule />;
     }

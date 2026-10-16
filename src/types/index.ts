@@ -24,7 +24,8 @@ export type ModuleId =
   | 'architect'
   | 'cloud-storage'
   | 'workspace-configurator'
-  | 'network-topology';
+  | 'network-topology'
+  | 'terrasphere-sync';
 
 export interface ModuleDefinition {
   id: ModuleId;
