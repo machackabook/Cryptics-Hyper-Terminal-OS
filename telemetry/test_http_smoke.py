@@ -5,7 +5,7 @@ class Runtime(unittest.TestCase):
   cls.token=secrets.token_hex(32)
   sock=socket.socket();sock.bind(('127.0.0.1',0));cls.port=sock.getsockname()[1];sock.close()
   cls.tmp=tempfile.TemporaryDirectory()
-  env=os.environ.copy();env.update(NEXUS_GATEWAY_TOKEN=cls.token,NEXUS_PORT=str(cls.port),NEXUS_LEDGER_DIR=cls.tmp.name)
+  env=os.environ.copy();env.update(NEXUS_GATEWAY_TOKEN=cls.token,NEXUS_PORT=str(cls.port),NEXUS_DATA_DIR=cls.tmp.name)
   cls.proc=subprocess.Popen(['node','telemetry/server.mjs'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,env=env)
   for _ in range(50):
    try:
