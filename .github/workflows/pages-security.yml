@@ -33,7 +33,7 @@ jobs:
           npm run lint
           npm run build
           test -s dist/index.html
-          node --test tests/security.test.mjs tests/public-surface.test.mjs
+          node --test tests/react-runtime-contract.test.mjs
           node scripts/verify.mjs
           node scripts/pages-security-audit.mjs --local-only
       - name: Save non-secret build receipt
