@@ -94,6 +94,7 @@ export const Header: React.FC = () => {
     { id: 'architect', label: 'The Architect Control Suite', icon: Lock },
     { id: 'cloud-storage', label: 'TetherMesh Cloud & SparseBundles', icon: Cloud },
     { id: 'workspace-configurator', label: 'Workspace Configurator & Layout', icon: Sliders },
+    { id: 'network-topology', label: 'Network Topology Map (D3)', icon: Globe },
   ];
 
   return (

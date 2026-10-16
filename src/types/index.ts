@@ -23,7 +23,8 @@ export type ModuleId =
   | 'telemetry'
   | 'architect'
   | 'cloud-storage'
-  | 'workspace-configurator';
+  | 'workspace-configurator'
+  | 'network-topology';
 
 export interface ModuleDefinition {
   id: ModuleId;

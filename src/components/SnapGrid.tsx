@@ -26,6 +26,7 @@ import { TelemetryDashboard } from './modules/TelemetryDashboard';
 import { ArchitectDashboard } from './modules/ArchitectDashboard';
 import { CloudStorageDashboard } from './modules/CloudStorageDashboard';
 import { WorkspaceConfigurator } from './modules/WorkspaceConfigurator';
+import { NetworkTopologyMap } from './modules/NetworkTopologyMap';
 
 const SNAP = 12;
 const snapVal = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -119,6 +120,8 @@ export const SnapGrid: React.FC = () => {
         return <CloudStorageDashboard />;
       case 'workspace-configurator':
         return <WorkspaceConfigurator />;
+      case 'network-topology':
+        return <NetworkTopologyMap />;
       default:
         return <TerminalModule />;
     }
