@@ -1,492 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  Cpu, 
-  Wifi, 
-  Shield, 
-  Server, 
-  Zap, 
-  Layers, 
-  RefreshCw, 
-  CheckCircle2, 
-  Sliders, 
-  SlidersHorizontal,
-  Lock,
-  Globe,
-  Radio,
-  BarChart3,
-  Terminal,
-  Users,
-  Bot,
-  Database,
-  Video,
-  Phone,
-  Share2,
-  Sparkles,
-  Play,
-  Layers3,
-  CpuIcon
-} from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  CartesianGrid 
-} from 'recharts';
-import { useCryptic } from '../../store/crypticContext';
-import { PacketCycleViz } from './PacketCycleViz';
-import { AgentBattalionView } from './AgentBattalionView';
-import { IncidentTimeline } from './IncidentTimeline';
-import { AgentTerminal } from './AgentTerminal';
+/** TDOC-12007 • NEXUS Golden Army TelemetryDashboard v7.1.0
+ * Drop-in replacement for Cryptics HyperTerminal OS /src/components/modules/TelemetryDashboard.tsx.
+ * Live metrics and task receipts MUST come from the local Node control plane.
+ * No Math.random telemetry, fabricated patches, imaginary providers, or arbitrary CLI execution.
+ */
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import { Activity, Bot, Cpu, Database, Download, Globe, Lock, Mic, MicOff, MonitorUp, Pause, Play, RefreshCw, Send, Shield, Users, Video, VideoOff, Wifi } from 'lucide-react';
+import {Area,AreaChart,CartesianGrid,Line,LineChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
+import {useCryptic} from '../../store/crypticContext';
 
-interface TelemetryPoint {
-  time: string;
-  cpu: number;
-  memory: number;
-  network: number;
-  agentsActive: number;
-}
+const ENDPOINT=(import.meta.env.VITE_NEXUS_TELEMETRY_URL || 'http://127.0.0.1:8787').replace(/\/$/,'');
+type Battalion='Vanguard'|'Shield'|'Recon';
+type Division='Network'|'Identity'|'Storage'|'Research'|'Media';
+type Tab='overview'|'sphere'|'dispatch'|'roster'|'assistants'|'communications'|'imaging'|'ledger';
+type Metric={at:string;cpuPercent:number|null;memoryPercent:number;networkRxMbps:number|null;networkTxMbps:number|null;networkSource:string;host:string;uptimeSeconds:number};
+type Clock={cycleCount:number;phase:number;driftMs:number;pairCount:number;slotMs:number;subframeMs:number};
+type NodeRec={id:string;name:string;battalion:Battalion;division:Division;platoon:string;platoonModel:string;pairedAgent:string;subWorker:string;trait:string;status:string;packetsDelivered:number;packetsDropped:number;cycleCount:number;taskReceipts:number};
+type Receipt={id:string;finishedAt:string;type:string;status:string;battalion:string;division:string;platoon:string;recipientCount:number;elapsedMs:number;error?:string;result?:unknown;ledger?:{seq:number;hash:string}};
+type Provider={id:string;name:string;scope:string;url:string;status:string};
+type Summary={registered:number;workerProcesses:number;onlineRemoteWorkers:number;pairs:number;taskSuccess:number;taskFailed:number;queued:number;autoDispatch:boolean;running:boolean;ledger:{seq:number;hash:string};oauthConfigured:boolean;latestEvent?:{type:string;timestamp:string}};
+type State={metrics:Metric|null;samples:Metric[];summary:Summary;clock:Clock;providers:Provider[];allowedTargets:string[];battalions:Battalion[];divisions:Division[];tasks:Receipt[];assistant:{provider:string;model:string;status:string;connectedHeyGaia:boolean};session:{name:string;method:string;csrf:string|null};gate:string;source:{os:string;network:string}};
+type Message={id:string;at:string;from:string;text:string};
+const BATS:Battalion[]=['Vanguard','Shield','Recon'];
+const DIVS:Division[]=['Network','Identity','Storage','Research','Media'];
+const cls='rounded-lg border border-cyan-500/25 bg-[#101832]/90 p-3';
+const inputStyle='w-full min-w-0 rounded bg-[#060c1e] px-3 py-2 text-xs text-slate-100 border border-cyan-700/50 focus:border-cyan-300 outline-none';
+const btn='px-3 py-2 rounded bg-cyan-950/70 border border-cyan-600/40 text-cyan-200 hover:bg-cyan-800/50 disabled:opacity-40 disabled:cursor-not-allowed text-xs';
+const failure=(e:unknown)=>e instanceof Error?e.message:String(e);
+const num=(v:number|null|undefined,places=1)=>typeof v==='number'&&Number.isFinite(v)?v.toFixed(places):'UNAVAILABLE';
 
-interface AgentNode {
-  id: string;
-  name: string;
-  battalion: string;
-  division: string;
-  platoonModel: string;
-  pairedAgent: string;
-  status: 'active' | 'patrolling' | 'reoptimizing' | 'synchronized';
-  packetsDelivered: number;
-  packetsDropped: number;
-  cycleCount: number;
-}
-
-export const TelemetryDashboard: React.FC = () => {
-  const { addTerminalLine, addLedger } = useCryptic();
-  const [data, setData] = useState<TelemetryPoint[]>([]);
-  const [tierSystem, setTierSystem] = useState<'tier-1' | 'tier-2' | 'tier-3' | 'god-sovereign'>('tier-1');
-  const [autoReoptimize, setAutoReoptimize] = useState(true);
-  const [solarisActive, SolarisActive] = useState(false);
-  const [godPolicyStatus, setGodPolicyStatus] = useState(true);
-  const [activeBattalion, setActiveBattalion] = useState<'all' | 'alpha-vanguard' | 'beta-shield' | 'gamma-recon'>('all');
-  
-  // Assistant states
-  const [heyGaiaActive, setHeyGaiaActive] = useState(true);
-  const [amazonQGrokActive, setAmazonQGrokActive] = useState(true);
-  const [codexGeminiActive, setCodexGeminiActive] = useState(true);
-  const [siriCopilotActive, setSiriCopilotActive] = useState(true);
-
-  // 6k Agent Nodes sample view state
-  const [agentNodes, setAgentNodes] = useState<AgentNode[]>([
-    { id: 'node-01', name: 'Gaia-Zero-Alpha', battalion: 'Vanguard', division: 'Infra-1', platoonModel: 'HuggingFace-Llama-Sovereign-v1', pairedAgent: 'Zero-Gaia-Alpha-Rev', status: 'active', packetsDelivered: 1420, packetsDropped: 0, cycleCount: 33 },
-    { id: 'node-02', name: 'Muse-Shield-Beta', battalion: 'Shield', division: 'Auth-2', platoonModel: 'HuggingFace-Mistral-AuthGuard', pairedAgent: 'Beta-Shield-Muse-Rev', status: 'synchronized', packetsDelivered: 2890, packetsDropped: 1, cycleCount: 67 },
-    { id: 'node-03', name: 'Q-Grok-Storage-Gamma', battalion: 'Recon', division: 'Storage-3', platoonModel: 'HuggingFace-CodeGrok-StoragePipe', pairedAgent: 'Gamma-Storage-QGrok-Rev', status: 'patrolling', packetsDelivered: 4120, packetsDropped: 0, cycleCount: 100 },
-    { id: 'node-04', name: 'Codex-Gemini-Delta', battalion: 'Vanguard', division: 'Research-4', platoonModel: 'HuggingFace-SparkArgon-Mesh', pairedAgent: 'Delta-Mesh-CodexGemini-Rev', status: 'reoptimizing', packetsDelivered: 5890, packetsDropped: 2, cycleCount: 133 },
-  ]);
-
-  const [voipActive, setVoipActive] = useState(false);
-  const [screenshareActive, setScreenshareActive] = useState(false);
-  const [battalionFilter, setBattalionFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-
-  // Initialize & simulate live telemetry feed
-  useEffect(() => {
-    const initialData: TelemetryPoint[] = [];
-    const now = Date.now();
-    for (let i = 15; i >= 0; i--) {
-      const d = new Date(now - i * 3000);
-      initialData.push({
-        time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        cpu: Number((32 + Math.random() * 25).toFixed(1)),
-        memory: Number((45 + Math.random() * 15).toFixed(1)),
-        network: Number((1.2 + Math.random() * 2.5).toFixed(2)),
-        agentsActive: 6000,
-      });
-    }
-    setData(initialData);
-
-    const interval = setInterval(() => {
-      setData(prev => {
-        const nextTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const lastCpu = prev[prev.length - 1]?.cpu || 40;
-        const nextCpu = Math.max(15, Math.min(95, Number((lastCpu + (Math.random() * 10 - 5)).toFixed(1))));
-        const nextMem = Number((48 + Math.random() * 10).toFixed(1));
-        const nextNet = Number((1.5 + Math.random() * 2).toFixed(2));
-        
-        const newPoint: TelemetryPoint = {
-          time: nextTime,
-          cpu: nextCpu,
-          memory: nextMem,
-          network: nextNet,
-          agentsActive: 6000,
-        };
-        return [...prev.slice(1), newPoint];
-      });
-
-      // Increment cycle counts and packet stats for agent nodes
-      setAgentNodes(prev => prev.map(node => ({
-        ...node,
-        packetsDelivered: node.packetsDelivered + Math.floor(Math.random() * 5) + 1,
-        cycleCount: node.cycleCount + 1,
-      })));
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleToggleTier = (tier: 'tier-1' | 'tier-2' | 'tier-3' | 'god-sovereign') => {
-    setTierSystem(tier);
-    addTerminalLine(`[TIER RANKING SYSTEM] Reallocated 6,000 agent battlegroups to governance level: ${tier.toUpperCase()}.`, 'good');
-    addLedger('telemetry.tier_reallocated', { tier });
-  };
-
-  const handleToggleSolaris = () => {
-    const next = !solarisActive;
-    SolarisActive(next);
-    if (next) {
-      addTerminalLine('[SOLARISARAFIN AI] Remote telemetry access link mounted into Architect Environment. Governed by GOD policy via Soul Stone.', 'good');
-      addLedger('architect.solarisarafin.activated', { status: 'ONLINE' });
-    } else {
-      addTerminalLine('[SOLARISARAFIN AI] Remote monitoring link suspended.', 'warn');
-    }
-  };
-
-  const handleReoptimizeSwarm = () => {
-    addTerminalLine('[6K SWARM] Re-evaluating all 6,000 defense processes. Reallocated network throughput and deployed zero-day security patches across divisions.', 'good');
-    addLedger('swarm.reoptimized', { agents: 6000 });
-  };
-
-  const handleDispatchTask = (battalion: string) => {
-    addTerminalLine(`[DISPATCH] Assigned monitoring protocol to 6k Swarm Battalion [${battalion}]. TetherMesh sandbox tables updated.`, 'good');
-    addLedger('swarm.dispatch', { battalion });
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-[#02050b] text-xs font-mono text-zinc-300 overflow-y-auto p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#42f5ff]/20">
-        <div className="flex items-center gap-2.5">
-          <Activity className="w-5 h-5 text-[#42f5ff] animate-pulse" />
-          <div>
-            <h2 className="text-sm font-bold text-white tracking-wider">6K AGENT SWARM TELEMETRY &amp; DEFENSE DASHBOARD</h2>
-            <p className="text-[10px] text-[#8aa0b6]">Real-time Recharts performance metrics feeding 6,000 autonomous security agents across TerraSphere</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleReoptimizeSwarm}
-            className="px-3 py-1.5 rounded-lg bg-[#42f5ff]/20 text-[#42f5ff] border border-[#42f5ff]/40 text-[10px] font-bold hover:bg-[#42f5ff]/30 cursor-pointer flex items-center gap-1.5 shadow"
-          >
-            <Zap className="w-3.5 h-3.5 text-[#74ff9b]" /> REOPTIMIZE 6K SWARM
-          </button>
-        </div>
-      </div>
-
-      {/* Top Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="p-3 rounded-xl bg-[#061426] border border-[#42f5ff]/30 shadow space-y-1">
-          <div className="flex items-center justify-between text-[10px] text-[#8aa0b6]">
-            <span>ACTIVE AGENT SWARM</span>
-            <Shield className="w-3.5 h-3.5 text-[#74ff9b]" />
-          </div>
-          <div className="text-xl font-bold text-white">6,000 / 6k</div>
-          <div className="text-[9px] text-[#74ff9b] font-semibold">100% Process Coverage (TerraSphere)</div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-[#061426] border border-[#42f5ff]/30 shadow space-y-1">
-          <div className="flex items-center justify-between text-[10px] text-[#8aa0b6]">
-            <span>SYSTEM CPU LOAD</span>
-            <Cpu className="w-3.5 h-3.5 text-[#42f5ff]" />
-          </div>
-          <div className="text-xl font-bold text-[#42f5ff]">
-            {data[data.length - 1]?.cpu || 35.2}%
-          </div>
-          <div className="text-[9px] text-[#8aa0b6]">Dynamic Thread Scaling</div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-[#061426] border border-[#42f5ff]/30 shadow space-y-1">
-          <div className="flex items-center justify-between text-[10px] text-[#8aa0b6]">
-            <span>MEMORY CONSUMPTION</span>
-            <Layers className="w-3.5 h-3.5 text-[#f5ce70]" />
-          </div>
-          <div className="text-xl font-bold text-[#f5ce70]">
-            {data[data.length - 1]?.memory || 52.4}%
-          </div>
-          <div className="text-[9px] text-[#8aa0b6]">Optimized via Vector Q-Quantization</div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-[#061426] border border-[#42f5ff]/30 shadow space-y-1">
-          <div className="flex items-center justify-between text-[10px] text-[#8aa0b6]">
-            <span>NETWORK THROUGHPUT</span>
-            <Wifi className="w-3.5 h-3.5 text-purple-400" />
-          </div>
-          <div className="text-xl font-bold text-purple-300">
-            {data[data.length - 1]?.network || 2.1} GB/s
-          </div>
-          <div className="text-[9px] text-purple-400">TetherMesh Cloud Storage Active</div>
-        </div>
-      </div>
-
-      {/* Native AI Assistants & Command Chain Integration */}
-      <div className="p-4 rounded-xl bg-[#061426] border border-[#42f5ff]/30 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-[#42f5ff]/20">
-          <span className="font-bold text-[#42f5ff] flex items-center gap-2">
-            <Bot className="w-4 h-4 text-[#f5ce70]" />
-            NATIVE AI PERSONNEL ASSISTANTS &amp; COMMAND CHAIN ("vhsin og vommsnf")
-          </span>
-          <span className="text-[9px] text-emerald-400 font-semibold">Hierarchy Active</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Hey GAIA & Muse */}
-          <div className="p-3 rounded-xl bg-[#030d1a] border border-cyan-500/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-[11px]">Hey GAIA &amp; Muse</span>
-              <span className="text-[9px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40">SSO Active</span>
-            </div>
-            <p className="text-[9px] text-zinc-400">heygaia.io personnel assistant partnered with Facebook Muse for dynamic social media findability and social SSO.</p>
-            <button
-              onClick={() => {
-                setHeyGaiaActive(!heyGaiaActive);
-                addTerminalLine('[HEY GAIA & MUSE] Social auth SSO handshake synchronized.', 'good');
-              }}
-              className={`w-full py-1.5 rounded text-[10px] font-bold ${heyGaiaActive ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50' : 'bg-zinc-800 text-zinc-400'}`}
-            >
-              {heyGaiaActive ? 'Muse Social SSO Online' : 'Connect'}
-            </button>
-          </div>
-
-          {/* Amazon Q & Grok */}
-          <div className="p-3 rounded-xl bg-[#030d1a] border border-cyan-500/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-[11px]">Amazon Q &amp; Grok</span>
-              <span className="text-[9px] bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/40">CLI Beta</span>
-            </div>
-            <p className="text-[9px] text-zinc-400">Offsite backup storage, security handling of pipes, and Amazon Q CLI (2024 beta) with Grok API integration wrapper.</p>
-            <button
-              onClick={() => {
-                setAmazonQGrokActive(!amazonQGrokActive);
-                addTerminalLine('[AMAZON Q CLI + GROK] Backup storage pipe initialized.', 'good');
-              }}
-              className={`w-full py-1.5 rounded text-[10px] font-bold ${amazonQGrokActive ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/50' : 'bg-zinc-800 text-zinc-400'}`}
-            >
-              {amazonQGrokActive ? 'Grok Backup Active' : 'Connect'}
-            </button>
-          </div>
-
-          {/* ChatGPT, Codex & Gemini Spark Argon */}
-          <div className="p-3 rounded-xl bg-[#030d1a] border border-cyan-500/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-[11px]">Codex &amp; Gemini Spark</span>
-              <span className="text-[9px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40">Meshed</span>
-            </div>
-            <p className="text-[9px] text-zinc-400">ChatGPT, OpenAI Codex meshed with Gemini Spark Argon for advanced research and extensible integration components.</p>
-            <button
-              onClick={() => {
-                setCodexGeminiActive(!codexGeminiActive);
-                addTerminalLine('[CODEX + GEMINI SPARK] Research mesh synchronized.', 'good');
-              }}
-              className={`w-full py-1.5 rounded text-[10px] font-bold ${codexGeminiActive ? 'bg-amber-600/30 text-amber-300 border border-amber-500/50' : 'bg-zinc-800 text-zinc-400'}`}
-            >
-              {codexGeminiActive ? 'Mesh Research Active' : 'Connect'}
-            </button>
-          </div>
-
-          {/* Siri & Copilot */}
-          <div className="p-3 rounded-xl bg-[#030d1a] border border-cyan-500/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-white text-[11px]">Siri &amp; Copilot</span>
-              <span className="text-[9px] bg-purple-950 text-purple-300 px-2 py-0.5 rounded border border-purple-500/40">Audio/Docs</span>
-            </div>
-            <p className="text-[9px] text-zinc-400">Native audio synthesis and documentation pipeline for the 6,000 worker hierarchy clearance and gated judgement.</p>
-            <button
-              onClick={() => {
-                setSiriCopilotActive(!siriCopilotActive);
-                addTerminalLine('[SIRI & COPILOT] Audio docs pipeline online.', 'good');
-              }}
-              className={`w-full py-1.5 rounded text-[10px] font-bold ${siriCopilotActive ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50' : 'bg-zinc-800 text-zinc-400'}`}
-            >
-              {siriCopilotActive ? 'Audio Pipeline Active' : 'Connect'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Recharts Live Telemetry Graphs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* CPU & Memory Trends */}
-        <div className="p-4 rounded-xl bg-[#061426] border border-[#42f5ff]/25 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#42f5ff]" /> CPU &amp; MEMORY LOAD TRENDS (%)
-            </span>
-            <span className="text-[9px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
-              Live Stream
-            </span>
-          </div>
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
-                <defs>
-                  <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#42f5ff" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#42f5ff" stopOpacity={0.0}/>
-                  </linearGradient>
-                  <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f5ce70" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#f5ce70" stopOpacity={0.0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#10253f" />
-                <XAxis dataKey="time" stroke="#68809b" fontSize={9} />
-                <YAxis stroke="#68809b" fontSize={9} domain={[0, 100]} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#051020', borderColor: '#42f5ff', borderRadius: '8px', fontSize: '10px', color: '#fff' }} 
-                />
-                <Area type="monotone" dataKey="cpu" stroke="#42f5ff" strokeWidth={2} fillOpacity={1} fill="url(#cpuGrad)" name="CPU Load %" />
-                <Area type="monotone" dataKey="memory" stroke="#f5ce70" strokeWidth={2} fillOpacity={1} fill="url(#memGrad)" name="Memory %" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Network Throughput */}
-        <div className="p-4 rounded-xl bg-[#061426] border border-[#42f5ff]/25 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-white flex items-center gap-2">
-              <Wifi className="w-4 h-4 text-purple-400" /> NETWORK THROUGHPUT (GB/s)
-            </span>
-            <span className="text-[9px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
-              Encrypted Socket
-            </span>
-          </div>
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#10253f" />
-                <XAxis dataKey="time" stroke="#68809b" fontSize={9} />
-                <YAxis stroke="#68809b" fontSize={9} domain={[0, 5]} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#051020', borderColor: '#a855f7', borderRadius: '8px', fontSize: '10px', color: '#fff' }} 
-                />
-                <Line type="monotone" dataKey="network" stroke="#a855f7" strokeWidth={2.5} dot={false} name="Throughput (GB/s)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Real-time PacketCycleViz Component */}
-      <PacketCycleViz />
-
-      {/* Agent Battalion View Component */}
-      <AgentBattalionView nodes={agentNodes} onDispatchTask={handleDispatchTask} />
-
-      {/* Tier Ranking System & Battalion Reallocation */}
-      <div className="p-4 rounded-xl bg-[#061224] border border-[#42f5ff]/30 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-[#42f5ff]/20">
-          <span className="font-bold text-[#42f5ff] flex items-center gap-2">
-            <Shield className="w-4 h-4 text-[#74ff9b]" />
-            TIER RANKING SYSTEM &amp; BATTALION ASSIGNMENT
-          </span>
-          <span className="text-[9px] text-zinc-400">6,000 Agents Tasked &amp; Synchronized</span>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <button
-            onClick={() => handleToggleTier('tier-1')}
-            className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-              tierSystem === 'tier-1' ? 'border-[#42f5ff] bg-[#42f5ff]/20 text-[#42f5ff]' : 'border-zinc-800 bg-[#040e1a] text-zinc-400 hover:text-white'
-            }`}
-          >
-            <div className="font-bold text-[11px]">TIER 1: VANGUARD</div>
-            <div className="text-[9px] text-zinc-400 mt-1">2,000 Agents • Real-time Threat Pruning</div>
-          </button>
-
-          <button
-            onClick={() => handleToggleTier('tier-2')}
-            className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-              tierSystem === 'tier-2' ? 'border-[#74ff9b] bg-[#74ff9b]/20 text-[#74ff9b]' : 'border-zinc-800 bg-[#040e1a] text-zinc-400 hover:text-white'
-            }`}
-          >
-            <div className="font-bold text-[11px]">TIER 2: SHIELD</div>
-            <div className="text-[9px] text-zinc-400 mt-1">2,000 Agents • Memory &amp; Cache Defense</div>
-          </button>
-
-          <button
-            onClick={() => handleToggleTier('tier-3')}
-            className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-              tierSystem === 'tier-3' ? 'border-[#f5ce70] bg-[#f5ce70]/20 text-[#f5ce70]' : 'border-zinc-800 bg-[#040e1a] text-zinc-400 hover:text-white'
-            }`}
-          >
-            <div className="font-bold text-[11px]">TIER 3: RECON</div>
-            <div className="text-[9px] text-zinc-400 mt-1">1,500 Agents • Network Anomaly Scanning</div>
-          </button>
-
-          <button
-            onClick={() => handleToggleTier('god-sovereign')}
-            className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-              tierSystem === 'god-sovereign' ? 'border-purple-400 bg-purple-950/40 text-purple-300' : 'border-zinc-800 bg-[#040e1a] text-zinc-400 hover:text-white'
-            }`}
-          >
-            <div className="font-bold text-[11px]">GOD SOVEREIGN</div>
-            <div className="text-[9px] text-zinc-400 mt-1">500 Agents • Soul Stone &amp; Core Policy Enforcers</div>
-          </button>
-        </div>
-      </div>
-
-      {/* Architect Remote Access Link & Solarisarafin AI Integration */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-[#120520] via-[#0b0314] to-[#05010a] border-2 border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.2)] space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-purple-500/30">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-purple-300 font-bold text-xs">
-              Ω
-            </div>
-            <div>
-              <h3 className="text-xs font-bold text-purple-300 tracking-wider">THE ARCHITECT: SOLARISARAFIN AI &amp; GOD POLICY LINK</h3>
-              <p className="text-[9px] text-purple-400/80">Dedicated remote monitoring link governed under the Soul Stone</p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleToggleSolaris}
-            className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              solarisActive ? 'border-emerald-500 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'border-purple-500/40 bg-purple-950/60 text-purple-200 hover:bg-purple-900'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>{solarisActive ? 'SOLARISARAFIN ACTIVE' : 'MOUNT SOLARISARAFIN AI'}</span>
-          </button>
-        </div>
-
-        {solarisActive && (
-          <div className="p-3 rounded-xl bg-[#190629]/90 border border-purple-500/40 space-y-2.5 animate-fadeIn">
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-purple-300 font-bold">Remote Monitoring Status:</span>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> SECURE TUNNEL ONLINE
-              </span>
-            </div>
-            <p className="text-[9px] text-purple-200/90 leading-relaxed">
-              Solarisarafin AI model is now hooked into the telemetry stream and 6k agent swarm. All network processes are continuously monitored and dynamically defended under the GOD policy set forth within the Soul Stone.
-            </p>
-            <div className="flex items-center justify-between text-[9px] text-purple-300/80 pt-1 border-t border-purple-500/20 font-mono">
-              <span>Governance: GOD-POLICY-SOUL-STONE-v1</span>
-              <span>Latency: 0.4ms</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Incident Timeline Component */}
-      <IncidentTimeline />
-
-      {/* Agent Terminal Control Console */}
-      <AgentTerminal />
-    </div>
-  );
+/** TerraSphere local geometric cluster: 6000 logical slots on a rotating sphere, no external data. */
+const TerraSphereCluster:React.FC<{registered:number;pairs:number;onPick:(id:string)=>void}> = ({registered,pairs,onPick}) => {
+ const canvasRef=useRef<HTMLCanvasElement>(null);const [spin,setSpin]=useState(true);const [angle,setAngle]=useState(0);const [chosen,setChosen]=useState('NODE-0001');
+ const angleRef=useRef(0);
+ useEffect(()=>{const el=canvasRef.current;if(!el)return;const ctx=el.getContext('2d');if(!ctx)return;let raf=0;let previous=0;
+ const render=(now:number)=>{if(now-previous<48){raf=requestAnimationFrame(render);return;}previous=now;
+ const box=el.getBoundingClientRect();const width=Math.max(300,Math.round(box.width)),height=350;const ratio=Math.min(window.devicePixelRatio||1,2);if(el.width!==width*ratio||el.height!==height*ratio){el.width=width*ratio;el.height=height*ratio;}ctx.setTransform(ratio,0,0,ratio,0,0);ctx.fillStyle='#02050b';ctx.fillRect(0,0,width,height);
+ const radius=Math.min(width*.36,145),cx=width/2,cy=height/2;const count=Math.min(6000,registered);let points=0;
+ for(let i=0;i<count;i++){const y=1-2*(i+.5)/count;const r=Math.sqrt(Math.max(0,1-y*y));const phi=i*2.399963229728653;const x=r*Math.cos(phi),z=r*Math.sin(phi);const co=Math.cos(angleRef.current),si=Math.sin(angleRef.current);const rx=x*co+z*si,rz=-x*si+z*co;if(rz<-.2)continue;
+ const battalion=Math.floor(i/2000);ctx.fillStyle=['#00ffff','#ffcc00','#9932cc'][battalion];ctx.globalAlpha=.28+.58*((rz+1)/2);ctx.fillRect(cx+rx*radius,cy+y*radius,1.7,1.7);points++;}
+ ctx.globalAlpha=1;ctx.strokeStyle='#00ffff40';ctx.beginPath();ctx.ellipse(cx,cy,radius,radius,0,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#94a3b8';ctx.font='11px monospace';ctx.fillText(`VISIBLE SURFACE SLOTS ${points} / ${count}`,12,22);ctx.fillText('LOCAL GEOMETRY · NOT GEONAV OR REMOTE WORKERS',12,height-12);
+ raf=requestAnimationFrame(render);};raf=requestAnimationFrame(render);return()=>cancelAnimationFrame(raf);},[registered]);
+ useEffect(()=>{if(!spin)return;const timer=setInterval(()=>{angleRef.current+=.04;setAngle(angleRef.current);},80);return()=>clearInterval(timer);},[spin]);
+ const pick=(e:React.MouseEvent<HTMLCanvasElement>)=>{const r=e.currentTarget.getBoundingClientRect();const x=(e.clientX-r.left)/r.width;const y=(e.clientY-r.top)/r.height;const i=Math.max(1,Math.min(registered,Math.floor((y*.7+x*.3)*registered)+1));const id=`NODE-${String(i).padStart(4,'0')}`;setChosen(id);onPick(id);};
+ return <section className="rounded-lg bg-[#050b1d] border border-cyan-500/30 p-3 space-y-3"><h3 className="text-cyan-300 font-bold">SOLARISARAFIN / TERRASPHERE — LOCAL SANDBOX CLUSTER</h3><p className="text-slate-400">Visual assignment of {registered.toLocaleString()} logical agent slots and {pairs.toLocaleString()} pairs. This globe is local computational geometry; not live Google terrain or physical sandbox isolation. Node selection opens roster.</p><canvas ref={canvasRef} className="w-full cursor-crosshair rounded-lg" style={{height:350}} onClick={pick} aria-label="Rotating virtual agent sphere"/><div className="flex gap-2 items-center"><button className={btn} onClick={()=>setSpin(v=>!v)}>{spin?'Pause Orbit':'Resume Orbit'}</button><span>Phase {angle.toFixed(2)} rad · Selected {chosen}</span></div></section>;
+};
+export const TelemetryDashboard:React.FC=()=>{
+ const {addTerminalLine,addLedger}=useCryptic();
+ const [credential,setCredential]=useState('');
+ const [token,setToken]=useState('');
+ const [state,setState]=useState<State|null>(null);
+ const [error,setError]=useState('');
+ const [stream,setStream]=useState<'OFFLINE'|'CONNECTING'|'LIVE'|'RECONNECTING'>('OFFLINE');
+ const [tab,setTab]=useState<Tab>('overview');
+ const [busy,setBusy]=useState(false);
+ const [battalion,setBattalion]=useState<Battalion>('Vanguard');
+ const [division,setDivision]=useState<Division|'all'>('all');
+ const [platoon,setPlatoon]=useState('all');
+ const [taskType,setTaskType]=useState('system_metrics');
+ const [target,setTarget]=useState('');
+ const [nodes,setNodes]=useState<NodeRec[]>([]);
+ const [nodeCount,setNodeCount]=useState(0);
+ const [offset,setOffset]=useState(0);
+ const [nodeSearch,setNodeSearch]=useState('');
+ const [renameId,setRenameId]=useState('NODE-0001');
+ const [renameValue,setRenameValue]=useState('');
+ const [audit,setAudit]=useState<{valid:boolean;entries:number;hash:string}|null>(null);
+ const [messages,setMessages]=useState<Message[]>([]);
+ const [chatText,setChatText]=useState('');
+ const [assistantQuestion,setAssistantQuestion]=useState('');
+ const [assistantAnswer,setAssistantAnswer]=useState('');
+ const [micOn,setMicOn]=useState(false);
+ const [videoOn,setVideoOn]=useState(false);
+ const [screenOn,setScreenOn]=useState(false);
+ const [mediaStatus,setMediaStatus]=useState('LOCAL_ONLY — no remote peer attached');
+ const videoRef=useRef<HTMLVideoElement>(null);
+ const screenRef=useRef<HTMLVideoElement>(null);
+ const micRef=useRef<MediaStream|null>(null);
+ const cameraRef=useRef<MediaStream|null>(null);
+ const screenStreamRef=useRef<MediaStream|null>(null);
+ const authRef=useRef<{token:string;csrf:string|null}>({token:'',csrf:null});
+ const authenticated=Boolean(state);
+ const api=useCallback(async(path:string,method:'GET'|'POST'='GET',value?:object)=>{
+  const headers:Record<string,string>={};if(authRef.current.token)headers.Authorization='Bearer '+authRef.current.token;
+  if(method==='POST'){headers['content-type']='application/json';if(authRef.current.csrf)headers['X-CSRF-Token']=authRef.current.csrf;}
+  const res=await fetch(ENDPOINT+path,{method,headers,credentials:'include',body:value?JSON.stringify(value):undefined,cache:'no-store'});
+  const data=await res.json();if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);return data;
+ },[]);
+ const pullState=useCallback(async()=>{const s:State=await api('/api/state');authRef.current.csrf=s.session.csrf;setState(s);setError('');return s;},[api]);
+ const login=async(e?:React.FormEvent)=>{e?.preventDefault();authRef.current.token=credential.trim();setBusy(true);try{await pullState();setToken(credential.trim());setCredential('');addTerminalLine('[TDOC-12007] Gateway session authenticated; live feed established.','good');}catch(e){authRef.current.token='';setToken('');setError('Gateway authorization denied: '+failure(e));}finally{setBusy(false);}};
+ const logout=async()=>{try{if(state?.session.method==='github')await api('/auth/logout','POST',{});}catch{}authRef.current.token='';authRef.current.csrf=null;setToken('');setState(null);setNodes([]);setStream('OFFLINE');};
+ const command=useCallback(async(action:string,payload:object)=>{setBusy(true);try{const result=await api(action,'POST',payload);setError('');addLedger('nexus.telemetry.action',{action,...payload,responseStatus:result.status||'ACCEPTED'});addTerminalLine(`[NEXUS] ${action} accepted by authenticated gateway`, 'good');if(action==='/api/control'||action==='/api/dispatch')await pullState();return result;}catch(e){setError(failure(e));addTerminalLine('[NEXUS] Operation rejected: '+failure(e),'warn');return null;}finally{setBusy(false);}},[api,pullState,addLedger,addTerminalLine]);
+ useEffect(()=>{let mounted=true;(async()=>{try{const s:State=await api('/api/state');if(mounted){authRef.current.csrf=s.session.csrf;setState(s);}}catch{}})();return()=>{mounted=false;};},[api]);
+ useEffect(()=>{
+  if(!authenticated)return;
+  let stopped=false;let abort:AbortController|null=null;let retry:ReturnType<typeof setTimeout>|undefined;
+  async function connect(){if(stopped)return;abort=new AbortController();setStream('CONNECTING');try{
+   const headers:Record<string,string>={};if(authRef.current.token)headers.Authorization='Bearer '+authRef.current.token;
+   const res=await fetch(ENDPOINT+'/api/stream',{headers,credentials:'include',signal:abort.signal,cache:'no-store'});
+   if(!res.ok||!res.body)throw Error('Live stream refused HTTP '+res.status);
+   setStream('LIVE');const reader=res.body.getReader(),decoder=new TextDecoder();let buffer='';
+   while(!stopped){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});let end;
+    while((end=buffer.indexOf('\n\n'))!==-1){const chunk=buffer.slice(0,end);buffer=buffer.slice(end+2);for(const line of chunk.split('\n'))if(line.startsWith('data: ')){try{const ev=JSON.parse(line.slice(6));if(ev.type==='telemetry'||ev.type==='hello'||ev.type==='control'||ev.type==='task'){setState(prev=>prev?{...prev,metrics:ev.metrics||prev.metrics,clock:ev.clock||prev.clock,summary:ev.summary||prev.summary,samples:ev.metrics?[...prev.samples,ev.metrics].slice(-60):prev.samples,tasks:ev.receipt?[ev.receipt,...prev.tasks].slice(0,30):prev.tasks}:prev);}if(ev.type==='message')setMessages(p=>p.some(x=>x.id===ev.message.id)?p:[...p,ev.message].slice(-50));}catch{}}}
+   }
+  }catch(e){if(!stopped)setError('Stream: '+failure(e));}if(!stopped){setStream('RECONNECTING');retry=setTimeout(connect,2500);}}
+  void connect();return()=>{stopped=true;abort?.abort();if(retry)clearTimeout(retry);};
+ },[authenticated,token]);
+ useEffect(()=>{if(!authenticated||tab!=='roster')return;let cancelled=false;const q=new URLSearchParams({offset:String(offset),limit:'40',battalion,division,platoon,q:nodeSearch});api('/api/nodes?'+q).then(r=>{if(!cancelled){setNodes(r.nodes);setNodeCount(r.count);}}).catch(e=>{if(!cancelled)setError(failure(e));});return()=>{cancelled=true;};},[authenticated,tab,battalion,division,platoon,offset,nodeSearch,state?.summary.taskSuccess,api]);
+ useEffect(()=>{if(!authenticated||tab!=='communications')return;api('/api/messages').then(r=>setMessages(r.messages)).catch(e=>setError(failure(e)));},[authenticated,tab,api]);
+ useEffect(()=>()=>{[micRef,cameraRef,screenStreamRef].forEach(x=>x.current?.getTracks().forEach(t=>t.stop()));},[]);
+ const speakState=()=>{if(!('speechSynthesis' in window)){setMediaStatus('Native browser TTS unavailable');return;}const m=state?.metrics;const text=`Nexus gateway ${state?.summary.running?'running':'paused'}. ${state?.summary.registered} virtual agent slots; ${state?.summary.onlineRemoteWorkers} verified remote workers. CPU ${num(m?.cpuPercent)} percent. Memory ${num(m?.memoryPercent)} percent. ${state?.summary.taskSuccess} successful dispatches.`;window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));setMediaStatus('Browser speech synthesis requested by operator. Not Siri or Copilot.');};
+ const startMic=async()=>{if(micOn){micRef.current?.getTracks().forEach(x=>x.stop());micRef.current=null;setMicOn(false);return;}try{if(!navigator.mediaDevices)throw Error('Secure context required');micRef.current=await navigator.mediaDevices.getUserMedia({audio:true});setMicOn(true);setMediaStatus('Microphone capture locally active; not transmitted');}catch(e){setMediaStatus(failure(e));}};
+ const startCamera=async()=>{if(videoOn){cameraRef.current?.getTracks().forEach(x=>x.stop());cameraRef.current=null;if(videoRef.current)videoRef.current.srcObject=null;setVideoOn(false);return;}try{if(!navigator.mediaDevices)throw Error('Secure context required');const m=await navigator.mediaDevices.getUserMedia({video:true,audio:false});cameraRef.current=m;if(videoRef.current)videoRef.current.srcObject=m;setVideoOn(true);setMediaStatus('Camera local preview active; not transmitted');}catch(e){setMediaStatus(failure(e));}};
+ const startScreen=async()=>{if(screenOn){screenStreamRef.current?.getTracks().forEach(x=>x.stop());screenStreamRef.current=null;if(screenRef.current)screenRef.current.srcObject=null;setScreenOn(false);return;}try{if(!navigator.mediaDevices?.getDisplayMedia)throw Error('Screen capture unsupported / requires secure context');const m=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});screenStreamRef.current=m;if(screenRef.current)screenRef.current.srcObject=m;setScreenOn(true);setMediaStatus('Screen capture local preview active; not transmitted');m.getVideoTracks()[0]?.addEventListener('ended',()=>{setScreenOn(false);if(screenRef.current)screenRef.current.srcObject=null;});}catch(e){setMediaStatus(failure(e));}};
+ const exportJSON=(filename:string,records:unknown)=>{const url=URL.createObjectURL(new Blob([JSON.stringify(records,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+ const dispatch=async()=>{const r=await command('/api/dispatch',{taskType,battalion,division,platoon,target:taskType==='dns_lookup'?target:''});if(r)setTab('ledger');};
+ const renameNode=async(e:React.FormEvent)=>{e.preventDefault();const r=await command('/api/nodes/name',{id:renameId,name:renameValue});if(r){setRenameValue('');setOffset(0);const q=new URLSearchParams({offset:'0',limit:'40',battalion,division,platoon,q:nodeSearch});const rs=await api('/api/nodes?'+q);setNodes(rs.nodes);setNodeCount(rs.count);}};
+ const checkAudit=async()=>{try{const r=await api('/api/audit');setAudit(r);setError('');}catch(e){setError(failure(e));}};
+ const askAssistant=async(e:React.FormEvent)=>{e.preventDefault();if(!assistantQuestion.trim())return;setBusy(true);try{const r=await api('/api/assistant','POST',{message:assistantQuestion});setAssistantAnswer(r.reply);await pullState();}catch(e){setAssistantAnswer('REQUEST FAILED — '+failure(e));}finally{setBusy(false);}};
+ const sendMessage=async(e:React.FormEvent)=>{e.preventDefault();const text=chatText.trim();if(!text)return;const r=await command('/api/messages',{text});if(r){setChatText('');setMessages(p=>[...p,r.message].slice(-50));}};
+ const tabs:Tab[]=['overview','sphere','dispatch','roster','assistants','communications','imaging','ledger'];
+ return <div className="flex flex-col h-full min-h-0 overflow-y-auto bg-[#0A0A1F] p-4 text-[#E0E7FF] font-mono text-xs space-y-4">
+  <header className="flex flex-wrap justify-between items-center gap-2 border-b border-cyan-600/40 pb-3"><div><h2 className="font-black tracking-widest text-lg text-[#00FFFF]">◈ GOLDEN ARMY | LIVE TELEMETRY v7</h2><div className="text-[10px] text-slate-400">TDOC-12007 · evidence-first · 6,000 virtual identities · signed gateway required</div></div><div className="flex gap-2 items-center"><span className={stream==='LIVE'?'text-emerald-400':'text-amber-400'}>{authenticated?`GATE AUTHORIZED · STREAM ${stream}`:'GATE LOCKED'}</span>{authenticated&&<button className={btn} onClick={logout}><Lock className="inline w-3"/> Exit Gate</button>}</div></header>
+  {!authenticated?<section className={`${cls} max-w-xl mx-auto w-full space-y-3`}><h3 className="text-amber-300 font-bold">SYNAPSE ACCESS GATE</h3><p>Start the real telemetry service on your own machine. Authenticate using its local bearer token or a configured GitHub OAuth identity. Credentials are not persisted in the dashboard.</p><form className="flex gap-2" onSubmit={login}><input className={inputStyle} type="password" autoComplete="off" placeholder="NEXUS_GATEWAY_TOKEN" value={credential} onChange={e=>setCredential(e.target.value)}/><button disabled={busy} className={btn}>Enter Gateway</button></form><div className="flex gap-2 flex-wrap"><button className={btn} onClick={()=>{void login();}}>Check GitHub Session</button><a className={btn} target="_blank" rel="noreferrer" href={ENDPOINT+'/auth/github'}>GitHub SSO ↗</a><a className={btn} target="_blank" rel="noreferrer" href={ENDPOINT+'/health'}>Gateway Health ↗</a></div><p className="text-slate-400">GitHub SSO requires registered OAuth credentials, exact callback URI and username allowlist. No other identity provider is claimed online.</p>{error&&<div role="alert" className="text-red-300">{error}</div>}</section>:<>
+  {error&&<div role="alert" className="border border-amber-600 text-amber-300 p-2 rounded">{error}</div>}
+  <nav className="flex flex-wrap gap-1" aria-label="Telemetry sections">{tabs.map(t=><button key={t} onClick={()=>setTab(t)} className={`${btn} ${tab===t?'border-amber-400 text-amber-300 bg-amber-900/20':''}`}>{t.toUpperCase()}</button>)}</nav>
+  <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">{[
+   ['VIRTUAL SLOTS',state?.summary.registered.toLocaleString()||'0','not OS processes'],['REGISTERED PAIRS',state?.summary.pairs.toLocaleString()||'0','deterministic pairing'],['REAL CPU',num(state?.metrics?.cpuPercent)+'%','host utilization sampled'],['REAL MEMORY',num(state?.metrics?.memoryPercent)+'%','operating system'],['NETWORK RX',num(state?.metrics?.networkRxMbps,3)+' Mbps',state?.metrics?.networkSource||'unavailable']
+  ].map(([name,value,source])=><div key={name} className={cls}><div className="text-[9px] text-slate-400">{name}</div><div className="text-lg font-bold text-cyan-300">{value}</div><div className="text-[9px] text-slate-500">{source}</div></div>)}</div>
+  {tab==='overview'&&<><section className="grid grid-cols-1 md:grid-cols-2 gap-3"><div className={cls}><div className="font-bold text-cyan-300 pb-3"><Cpu className="inline w-4"/> LIVE HOST CPU / MEMORY</div><div className="h-52"><ResponsiveContainer width="100%" height="100%"><AreaChart data={state?.samples||[]}><CartesianGrid stroke="#233555" strokeDasharray="3 3"/><XAxis dataKey="at" tickFormatter={v=>String(v).slice(11,19)} fontSize={9}/><YAxis domain={[0,100]}/><Tooltip/><Area type="monotone" dataKey="cpuPercent" stroke="#00FFFF" fill="#00FFFF" fillOpacity={.12} name="CPU %" connectNulls/><Area type="monotone" dataKey="memoryPercent" stroke="#FFCC00" fill="#FFCC00" fillOpacity={.10} name="Memory %"/></AreaChart></ResponsiveContainer></div></div><div className={cls}><div className="font-bold text-purple-300 pb-3"><Wifi className="inline w-4"/> HOST INTERFACE THROUGHPUT</div><div className="h-52"><ResponsiveContainer width="100%" height="100%"><LineChart data={state?.samples||[]}><CartesianGrid stroke="#233555" strokeDasharray="3 3"/><XAxis dataKey="at" tickFormatter={v=>String(v).slice(11,19)} fontSize={9}/><YAxis/><Tooltip/><Line type="monotone" dataKey="networkRxMbps" stroke="#9333EA" dot={false} name="RX Mbps" connectNulls/><Line type="monotone" dataKey="networkTxMbps" stroke="#34D399" dot={false} name="TX Mbps" connectNulls/></LineChart></ResponsiveContainer></div></div></section>
+  <section className={cls}><div className="flex justify-between flex-wrap gap-2"><h3 className="text-amber-300 font-bold">HAMILTONIAN PAIRED CLOCK • 100 ms slots / 33.333 ms subdivisions</h3><span className="text-emerald-300">MONOTONIC HOST CLOCK</span></div><div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">{[['Completed 100ms slots',state?.clock.cycleCount],['Pair clusters',state?.clock.pairCount],['Current phase (0–2)',state?.clock.phase],['Scheduler drift ms',num(state?.clock.driftMs,3)]].map(([x,y])=><div key={x} className="bg-[#050917] p-3 rounded"><div className="text-slate-400">{x}</div><div className="text-xl font-bold text-cyan-200">{y}</div></div>)}</div><div className="mt-3 h-2 bg-slate-800 rounded overflow-hidden"><div className="h-full bg-gradient-to-r from-cyan-400 via-purple-500 to-amber-400 transition-all duration-200" style={{width:`${((state?.clock.phase??0)+1)/3*100}%`}}/></div><p className="text-slate-400 mt-2">Pair → sub-worker lineage is registered; +1 means a verified logical task receipt, not a physical Ethernet packet. Failed deliveries are counted, never forced to zero. Scheduler jitter is measured. A 0.001 ms return is not asserted.</p></section>
+  <section className={`${cls} flex flex-wrap gap-2 items-center`}><Shield className="text-emerald-400 w-4"/><span>Control plane: <strong className="text-cyan-200">{state?.summary.running?'RUNNING':'PAUSED'}</strong></span><button disabled={busy} className={btn} onClick={()=>void command('/api/control',{action:state?.summary.running?'pause':'resume'})}>{state?.summary.running?<Pause className="inline w-3"/>:<Play className="inline w-3"/>} {state?.summary.running?'Pause Dispatch':'Resume Dispatch'}</button><label className="flex gap-2 items-center cursor-pointer"><input type="checkbox" checked={!!state?.summary.autoDispatch} disabled={busy} onChange={e=>void command('/api/control',{action:'auto',value:e.target.checked})}/> Scheduled measurements every 12 sec</label><button className={btn} disabled={busy} onClick={()=>void command('/api/control',{action:'reverify'})}><RefreshCw className="inline w-3"/> Verify Pair Registry</button><div className="text-slate-400">Completed {state?.summary.taskSuccess} / failed {state?.summary.taskFailed} / queued {state?.summary.queued}</div></section></>}
+  {tab==='dispatch'&&<section className={`${cls} space-y-4`}><h3 className="text-amber-300 font-bold">DIVISION / BATTALION DISPATCH · bounded, permissioned operations</h3><div className="grid grid-cols-1 md:grid-cols-4 gap-2"><label>Battalion<select className={inputStyle} value={battalion} onChange={e=>setBattalion(e.target.value as Battalion)}>{BATS.map(x=><option key={x}>{x}</option>)}</select></label><label>Division<select className={inputStyle} value={division} onChange={e=>setDivision(e.target.value as Division|'all')}><option value="all">All 5 divisions</option>{DIVS.map(x=><option key={x}>{x}</option>)}</select></label><label>Platoon<select className={inputStyle} value={platoon} onChange={e=>setPlatoon(e.target.value)}><option value="all">All platoons</option>{Array.from({length:10},(_,i)=>`P${String(i+1).padStart(2,'0')}`).map(x=><option key={x}>{x}</option>)}</select></label><label>Task<select className={inputStyle} value={taskType} onChange={e=>setTaskType(e.target.value)}><option value="system_metrics">Local system metrics</option><option value="interface_health">Local interface inventory</option><option value="dns_lookup">Allowlisted DNS lookup</option></select></label></div>{taskType==='dns_lookup'&&<label>Approved DNS target<select className={inputStyle} value={target} onChange={e=>setTarget(e.target.value)}><option value="">Choose allowlisted target</option>{(state?.allowedTargets||[]).map(x=><option key={x}>{x}</option>)}</select></label>}<button className={btn} disabled={busy||!state?.summary.running||(taskType==='dns_lookup'&&!target)} onClick={dispatch}><Send className="inline w-3"/> Dispatch to selected logical recipients</button><p className="text-slate-400">One real measurement produces receipts for the scoped virtual recipients. No mass host scanning, shell access, 6,000 outgoing DNS queries, automatic firmware changes, or API charges.</p></section>}
+  {tab==='roster'&&<section className={`${cls} space-y-3`}><div className="flex flex-wrap gap-2 justify-between"><h3 className="font-bold text-amber-300"><Users className="inline w-4"/> 6,000 VIRTUAL AGENT ROSTER • {nodeCount} matching</h3><button className={btn} onClick={()=>exportJSON('nexus-roster-visible.json',nodes)}><Download className="inline w-3"/> Export page</button></div><div className="grid grid-cols-2 md:grid-cols-4 gap-2"><select className={inputStyle} value={battalion} onChange={e=>{setBattalion(e.target.value as Battalion);setOffset(0);}}>{BATS.map(x=><option key={x}>{x}</option>)}</select><select className={inputStyle} value={division} onChange={e=>{setDivision(e.target.value as Division|'all');setOffset(0);}}><option value="all">All divisions</option>{DIVS.map(x=><option key={x}>{x}</option>)}</select><select className={inputStyle} value={platoon} onChange={e=>{setPlatoon(e.target.value);setOffset(0);}}><option value="all">All platoons</option>{Array.from({length:10},(_,i)=>`P${String(i+1).padStart(2,'0')}`).map(x=><option key={x}>{x}</option>)}</select><input className={inputStyle} value={nodeSearch} onChange={e=>{setNodeSearch(e.target.value);setOffset(0);}} placeholder="Find node/name"/></div><form onSubmit={renameNode} className="flex flex-wrap gap-2 items-center"><label>Agent ID<input className={inputStyle} value={renameId} onChange={e=>setRenameId(e.target.value)} placeholder="NODE-0001"/></label><label>Approved designation<input className={inputStyle} value={renameValue} onChange={e=>setRenameValue(e.target.value)} placeholder="Choose unique agent name" maxLength={48}/></label><button className={btn} disabled={busy||!renameValue.trim()}>Assign Name + Ledger Proof</button></form><div className="overflow-x-auto max-h-[360px]"><table className="min-w-full text-[10px]"><thead className="sticky top-0 bg-[#060c1e]"><tr>{['ID','Name','Division','Platoon','Model','The One reverse pair','Subworker','Trait','Verified receipts','Failed','Status'].map(x=><th key={x} className="p-2 text-left">{x}</th>)}</tr></thead><tbody>{nodes.map(n=><tr key={n.id} className="border-t border-slate-800"><td className="p-2 text-cyan-300">{n.id}</td><td className="p-2">{n.name}</td><td className="p-2">{n.division}</td><td className="p-2">{n.platoon}</td><td className="p-2 text-amber-300">{n.platoonModel}</td><td className="p-2 text-purple-300">{n.pairedAgent}</td><td className="p-2">{n.subWorker}</td><td className="p-2">{n.trait}</td><td className="p-2">{n.packetsDelivered}</td><td className="p-2">{n.packetsDropped}</td><td className="p-2">{n.status}</td></tr>)}</tbody></table></div><div className="flex items-center gap-3"><button className={btn} disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-40))}>Previous 40</button><span>{offset+1}–{Math.min(offset+40,nodeCount)} of {nodeCount}</span><button className={btn} disabled={offset+40>=nodeCount} onClick={()=>setOffset(offset+40)}>Next 40</button></div></section>}
+  {tab==='sphere'&&<TerraSphereCluster registered={state?.summary.registered ?? 0} pairs={state?.summary.pairs ?? 0} onPick={(id)=>{setRenameId(id);setTab('roster');}}/>}
+  {tab==='assistants'&&<section className={`${cls} space-y-3`}><h3 className="font-bold text-amber-300"><Bot className="inline w-4"/> PERSONNEL ASSISTANTS / EXTERNAL CAPABILITY REGISTRY</h3><p>Each provider has an official reference and connection state. Clicking Open Provider goes to the actual service. This gateway does not impersonate third-party OAuth, infer credentials, or claim model inference is active.</p><div className="bg-[#060c1e] p-3 rounded border border-cyan-700/40 space-y-2"><div className="text-cyan-300">PERSONNEL AI API · {state?.assistant.status} · {state?.assistant.provider} / {state?.assistant.model}</div><form onSubmit={askAssistant} className="flex gap-2"><input className={inputStyle} value={assistantQuestion} onChange={e=>setAssistantQuestion(e.target.value)} placeholder="Ask about live metrics / tasks" maxLength={2000}/><button className={btn} disabled={busy||state?.assistant.status==='NOT_CONFIGURED'}>Ask GAIA SkillForge</button></form>{assistantAnswer&&<p aria-live="polite" className="whitespace-pre-wrap border-t border-slate-700 pt-2">{assistantAnswer}</p>}<p className="text-slate-400">Model requests only occur when submitted. Default adapter: local GAIA SkillForge deterministic skill cards; optional loopback Ollama, OpenAI or xAI. Hey GAIA remains a separately deployable assistant, not silently substituted.</p></div><div className="grid md:grid-cols-2 gap-3">{state?.providers.map(p=><article key={p.id} className="border border-slate-700 rounded p-3 bg-[#060c1e]"><div className="flex justify-between gap-2"><strong className="text-cyan-200">{p.name}</strong><span className="text-[9px] text-amber-300">{p.status}</span></div><p className="text-slate-400 my-2">{p.scope}</p><a className={`${btn} inline-block`} href={p.url} target="_blank" rel="noreferrer">Open official provider ↗</a></article>)}</div><p className="text-amber-300">Hey GAIA and Meta Muse are independent products, not a documented shared SSO identity provider. Kiro/Grok are not cloud storage products; use encrypted object storage for backups.</p></section>}
+  {tab==='communications'&&<section className="grid lg:grid-cols-2 gap-3"><div className={`${cls} space-y-2`}><h3 className="text-amber-300 font-bold"><Globe className="inline w-4"/> NEXUS IRC-STYLE AUTHENTICATED ROOM</h3><div className="h-60 overflow-y-auto bg-[#060c1e] p-2 rounded" aria-live="polite">{messages.map(x=><p key={x.id} className="my-1"><span className="text-slate-500">[{x.at.slice(11,19)}]</span> <strong className="text-cyan-300">{x.from}:</strong> {x.text}</p>)}</div><form className="flex gap-2" onSubmit={sendMessage}><input maxLength={1000} className={inputStyle} value={chatText} onChange={e=>setChatText(e.target.value)} placeholder="Authenticated room message"/><button className={btn} disabled={busy}>Send</button></form><p className="text-slate-400">Local authenticated server relay; no WebRTC server-to-server signaling or cloud peer federation is claimed.</p></div><div className={`${cls} space-y-2`}><h3 className="text-amber-300 font-bold">CONSENT-BASED AUDIO / VIDEO / SCREEN CAPTURE</h3><div className="flex flex-wrap gap-2"><button className={btn} onClick={speakState}>Speak Live State (Browser TTS)</button><button className={btn} onClick={startMic}>{micOn?<MicOff className="inline w-4"/>:<Mic className="inline w-4"/>} {micOn?'Stop microphone':'Enable microphone'}</button><button className={btn} onClick={startCamera}>{videoOn?<VideoOff className="inline w-4"/>:<Video className="inline w-4"/>} {videoOn?'Stop camera':'Enable camera'}</button><button className={btn} onClick={startScreen}><MonitorUp className="inline w-4"/> {screenOn?'Stop sharing':'Preview screen'}</button></div><div className="grid grid-cols-2 gap-2"><video autoPlay playsInline muted ref={videoRef} className="bg-[#02050b] rounded w-full h-40 object-contain"/><video autoPlay playsInline muted ref={screenRef} className="bg-[#02050b] rounded w-full h-40 object-contain"/></div><p className="text-slate-400">{mediaStatus}</p><p>Remote VOIP/video/screenshare needs consented WebRTC peers, signaling, STUN/TURN configuration, and identity gating before it can be marked operational. None of these local media tracks leave the browser.</p></div></section>}
+  {tab==='imaging'&&<section className={`${cls} space-y-3`}><h3 className="text-amber-300 font-bold"><Database className="inline w-4"/> GOLDEN ARMY FORGE • IMAGE PROVISIONING MANIFEST</h3><p>Export a signed-off provisioning <em>plan</em> for OS imaging, controlled worker registration, and Hugging Face platoon allocations. The browser cannot directly flash disks or mount an APFS sparsebundle.</p><button className={btn} onClick={()=>exportJSON('nexus-virtual-cluster-image-manifest-v7.json',{tdoc:'12007',version:'7.0.0',createdAt:new Date().toISOString(),slotCount:state?.summary.registered,pairCount:state?.summary.pairs,commandChain:['SYNAPSE','ADAM','GOLDEN_ARMY_FORGE','BATTALION','DIVISION','PLATOON','PAIRED_AGENT'],battalions:BATS,divisions:DIVS,platoonsPerDivision:10,slotsPerPlatoon:40,modelStatus:'UNASSIGNED_REQUIRES_HF_APPROVAL',cloudSparseBundle:'NOT_MOUNTED',webrtcFederation:'NOT_CONFIGURED',taskAllowlist:['system_metrics','interface_health','dns_lookup']})}><Download className="inline w-4"/> Export real provisioning manifest</button><div className="text-slate-400">Cloud storage, sparsebundle encryption/mount, external provider connectors, and hardware attestation require separate authenticated adapters; these controls do not silently bypass the NEP-2.0 SecureFS gate.</div></section>}
+  {tab==='ledger'&&<section className={`${cls} space-y-3`}><div className="flex items-center justify-between flex-wrap gap-2"><h3 className="font-bold text-amber-300"><Shield className="inline w-4"/> ADAM PROOF GATE / TASK RECEIPTS</h3><button className={btn} onClick={checkAudit}>Reverify Hash Chain</button></div>{audit&&<div className={audit.valid?'text-emerald-300':'text-red-300'}>Ledger continuity: {audit.valid?'VALID':'BROKEN'} · {audit.entries} entries · hash {audit.hash.slice(0,20)}…</div>}<div className="text-slate-400">Latest hash: {state?.summary.ledger.hash} • Entries: {state?.summary.ledger.seq}</div><div className="space-y-2">{(state?.tasks||[]).map(t=><div key={t.id} className="border border-slate-700 rounded p-2 bg-[#060c1e]"><div className="flex flex-wrap gap-2 justify-between"><span className={t.status==='SUCCEEDED'?'text-emerald-300':'text-red-300'}>{t.status} · {t.type}</span><span>{t.battalion} / {t.division} / {t.platoon} · {t.recipientCount} slots</span></div><div className="text-slate-400">{t.finishedAt} · {t.elapsedMs} ms · {t.id}</div>{t.error&&<p className="text-red-300">{t.error}</p>}{t.ledger&&<p className="text-amber-300">ADAM #{t.ledger.seq} {t.ledger.hash.slice(0,32)}…</p>}<details className="mt-1"><summary className="cursor-pointer text-cyan-300">Evidence result</summary><pre className="whitespace-pre-wrap break-all text-[10px] max-h-40 overflow-y-auto">{JSON.stringify(t.result||{error:t.error},null,2)}</pre></details></div>)}{!state?.tasks.length&&<p>Awaiting verified tasks. Dispatch one from the Division tab.</p>}</div></section>}
+  <footer className="border-t border-cyan-600/20 pt-3 text-[10px] text-slate-400 flex flex-wrap gap-3"><span><Activity className="inline w-3"/> Real data: {state?.source.os} → authenticated local gateway → UI</span><span><Shield className="inline w-3"/> no unauthorized network scans</span><span>GOLDEN G / TDOC 12007</span></footer>
+ </>}</div>;
 };

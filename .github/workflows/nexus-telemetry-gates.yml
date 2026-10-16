@@ -1,0 +1,28 @@
+name: NEXUS v10 Telemetry ADAM Gates
+on:
+  pull_request:
+    paths: ['src/components/modules/TelemetryDashboard.tsx','telemetry/**','GEMINI.md','AGENTS.md','docs/TELEMETRY_RUNTIME.md','.github/workflows/nexus-telemetry-gates.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Live loopback runtime HTTP tests
+        run: |
+          node --check telemetry/server.mjs
+          python3 -m unittest discover -s telemetry -p 'test_*.py' -v
+      - name: Typecheck and production bundle
+        run: |
+          npm install --no-fund --no-audit
+          npm run lint
+          npm run build
+          test -s dist/index.html
+      - name: Verify disabled fictitious telemetry statements
+        run: |
+          ! grep -E 'SSO Active|zero-day security patches|Math.random\(\)' src/components/modules/TelemetryDashboard.tsx
