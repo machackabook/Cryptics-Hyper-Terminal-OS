@@ -1,3 +1,4 @@
+import { DeveloperBrowserModule } from './modules/DeveloperBrowserModule';
 import React, { useRef } from 'react';
 import { useCryptic } from '../store/crypticContext';
 import { PanelInstanceState, ModuleId } from '../types';
@@ -116,7 +117,7 @@ export const SnapGrid: React.FC = () => {
       case 'enclaves':
         return <EnclavesStorageModule />;
       case 'extensions':
-        return <ExtensionsMCPModule />;
+        return <DeveloperBrowserModule />;
       case 'alpha-hologram':
         return <AlphaHologramCompressorModule />;
       case 'mcp-registry':

@@ -16,3 +16,7 @@ service-account*.json
 credentials*.json
 *secret*
 *.sparsebundle/
+
+# Native-only generated artifacts and local receipts
+native/developer-browser/out/
+reports/local/

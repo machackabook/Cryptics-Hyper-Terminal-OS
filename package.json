@@ -9,7 +9,10 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "start": "node server.ts",
     "lint": "tsc --noEmit",
-    "test:gsel": "node --test tests/gsel-engine.test.mjs"
+    "test:gsel": "node --test tests/gsel-engine.test.mjs",
+    "test:developer-browser": "node --test native/developer-browser/broker.test.mjs native/developer-browser/adam-gates.test.mjs",
+    "build:extension": "node native/developer-browser/build-extension.mjs",
+    "build:preview": "node native/developer-browser/build-preview.mjs"
   },
   "dependencies": {
     "@types/d3": "^7.4.3",
@@ -32,5 +35,6 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
-  }
+  },
+  "packageManager": "pnpm@11.25.0"
 }
