@@ -8,11 +8,13 @@ import { PersistentBackgroundFX } from './components/PersistentBackgroundFX';
 import { InteractiveGlobeModule } from './components/modules/InteractiveGlobeModule';
 import { GalaxiesSkyboxModule } from './components/modules/GalaxiesSkyboxModule';
 import { CommandPalette } from './components/CommandPalette';
+import { BrowserDeveloperModule } from './components/modules/BrowserDeveloperModule';
 import { Activity, Radio, Shield, Globe, Terminal, Sparkles } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { gateOpen, viewMode, setViewMode, ledgerRecords, tokens, beacons, incidents, clearUI } = useCryptic();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [browserDevOpen, setBrowserDevOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,6 +43,9 @@ const MainLayout: React.FC = () => {
 
       {/* Master Top Header */}
       <Header />
+
+      {/* Explicit developer UI entry point; never confers native browser privileges. */}
+      {gateOpen && !clearUI && <button type="button" aria-label="Open Chrome developer workspace" onClick={() => setBrowserDevOpen(true)} className="fixed top-16 right-4 z-40 px-3 py-2 rounded-lg border border-[#00FFFF] bg-[#14143D] text-[#00FFFF] text-xs">Chrome Dev</button>}
 
       {/* Viewport Content based on viewMode */}
       <main className="relative w-full h-full pt-14 pb-8 overflow-hidden z-10 pointer-events-auto">
@@ -95,6 +100,7 @@ const MainLayout: React.FC = () => {
         </footer>
       )}
 
+      {browserDevOpen && <BrowserDeveloperModule onClose={() => setBrowserDevOpen(false)} />}
       <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
