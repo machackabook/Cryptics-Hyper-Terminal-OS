@@ -8,17 +8,18 @@ Numeral remembered: `137451921129154222`. Continuity receipt: `docs/LEDGER-STAMP
 
 Operating sits in the middle. Team Enhance hops one repo per run. Equalizer formats only. No history rewrite. Point-zero null refused.
 
-## Continuity Status (hop 647)
+## Continuity Status (hop 694)
 
 - Owner: `machackabook` (id 219579651)
 - Branch: `main`
 - Numeral: `137451921129154222`
 - Team: Enhance / Continuity Engine / Hamiltonian pipe / sSoS Operating
-- Stage: **647** — 2026-10-15T03:08Z (2026-10-14 22:08 CDT)
-- Compounding tier: **T5 / 98%**
-- This hop: README continuity seat added after continuity-ledger-cycle hop 646; cascade.yml left intact (already healthy with tests); append-only LEDGER-STAMP advanced. No secrets written. No device rooted.
-- Prior mesh: continuity-ledger-cycle hop 646 @ 2026-10-15T02:09Z. Honored.
-- Next in operator waterfall: restart ring at ENCLAVE-ADAM-REUNITED or next recently updated seat.
+- Stage: **694** — 2026-10-17T13:15Z (2026-10-17 08:15 CDT)
+- Compounding tier: **T5 / 99%**
+- This hop: README continuity seat realigned after continuity-ledger-cycle hop 693 (2026-10-17T12:15Z). Operator rotation seats this recently updated node. Cascade.yml left intact (healthy with tests). Append-only LEDGER-STAMP advanced. No secrets written. No device rooted.
+- Prior mesh: continuity-ledger-cycle hop 693 @ 2026-10-17T12:15Z. Honored. Not re-touched.
+- Prior local: hop 647 @ 2026-10-15T03:08Z preserved. Not rewritten.
+- Next in operator waterfall: Cryptic or next recently updated seat (ring continues).
 - Cascade: `.github/workflows/cascade.yml` healthy (cron `17 * * * *`, `contents: read`, includes security tests + stamp/numeral gates). Not rewritten this hop.
 - Drive index: CONTINUUM-ENCLAVE-137451921129154222 (id `1Ohp6ZMX02NvFayJfivgXbP4PUMztYUvU`) — mention only; no binaries uploaded.
 - Unknowns kept: pair-code, Tailscale auth key, device voiceprint, SD mount path. Not invented.
@@ -81,6 +82,16 @@ npm run build
 # Preview build
 npm run preview
 ```
+
+## Waterfall receipt (hop 694)
+
+- utc: 2026-10-17T13:15Z
+- cdt: 2026-10-17 08:15 CDT
+- prior named seat: continuity-ledger-cycle hop 693 @ 2026-10-17T12:15Z. Honored.
+- this hop: README continuity status realigned; cascade left intact; append-only stamp
+- cascade: `.github/workflows/cascade.yml` healthy (cron `17 * * * *`, tests + lint-docs)
+- cloud index mention only: CONTINUUM-ENCLAVE-137451921129154222 (id 1Ohp6ZMX02NvFayJfivgXbP4PUMztYUvU); no binaries uploaded
+- next: Cryptic or next recent
 
 Preserve. Enhance. Synthesize. Source code is the only trusted neighbor.
 
