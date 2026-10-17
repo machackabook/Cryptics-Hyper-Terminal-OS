@@ -25,6 +25,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
 
   const commands: CommandItem[] = [
     { id: 'm-term', label: 'Command Fabric (Terminal)', category: 'Modules', icon: Terminal, action: () => openModule('terminal'), shortcut: 'T' },
+    { id: 'm-gsel', label: 'GSEL Wave Hue Gradient Engine', category: 'Modules', icon: Activity, action: () => { window.open('/gsel-wave-gradient-engine.html', '_blank', 'noopener,noreferrer'); } },
     { id: 'm-globe', label: 'GAIA 3D Globe & Radar', category: 'Modules', icon: Globe, action: () => openModule('globe'), shortcut: 'G' },
     { id: 'm-telemetry', label: 'Telemetry & 6k Agent Dashboard', category: 'Modules', icon: Activity, action: () => openModule('telemetry'), shortcut: 'M' },
     { id: 'm-architect', label: 'The Architect Control Suite', category: 'Modules', icon: Lock, action: () => openModule('architect'), shortcut: 'A' },
