@@ -1,0 +1,53 @@
+name: NEXUS Chrome Native ADAM Gates
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/modules/BrowserDeveloperModule.tsx'
+      - 'src/App.tsx'
+      - 'tools/chrome-bridge/**'
+      - 'tests/chrome-bridge/**'
+      - 'docs/CHROME_DEVELOPER_BRIDGE_v15.md'
+      - '.github/workflows/nexus-chrome-native-gates.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  source-and-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Typecheck and bundle React UI
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          npm run lint
+          npm run build
+          test -s dist/index.html
+      - name: Verify native browser source present
+        run: |
+          set -euo pipefail
+          test -s tools/chrome-bridge/server.mjs
+          test -s tools/chrome-bridge/mcp-stdio.mjs
+          test -s tests/chrome-bridge/bridge.test.mjs
+          node --check tools/chrome-bridge/server.mjs
+          node --check tools/chrome-bridge/mcp-stdio.mjs
+          git diff --check
+      - name: Run actual Chromium integration tests (no skipped production gates)
+        run: |
+          set -euo pipefail
+          node --test --test-reporter=tap tests/chrome-bridge/bridge.test.mjs | tee browser-evidence.tap
+          if grep -Eq '^# skipped [1-9]' browser-evidence.tap; then
+            echo 'BLOCKED: browser test skipped; manual testing required on an authorized Chrome host.'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nexus-chrome-todc12015
+          path: browser-evidence.tap
+          if-no-files-found: ignore
+          retention-days: 14
