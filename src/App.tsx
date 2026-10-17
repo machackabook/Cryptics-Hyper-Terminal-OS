@@ -8,10 +8,25 @@ import { PersistentBackgroundFX } from './components/PersistentBackgroundFX';
 import { InteractiveGlobeModule } from './components/modules/InteractiveGlobeModule';
 import { GalaxiesSkyboxModule } from './components/modules/GalaxiesSkyboxModule';
 import { CommandPalette } from './components/CommandPalette';
-import { Activity, Radio, Shield, Globe, Terminal, Sparkles } from 'lucide-react';
+import { SignalMonitor } from './components/SignalMonitor';
+import { ActiveCallOverlay } from './components/ActiveCallOverlay';
+import { Activity, Radio, Shield, Globe, Terminal, Sparkles, Play, Pause, RefreshCw } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { gateOpen, viewMode, setViewMode, ledgerRecords, tokens, beacons, incidents, clearUI } = useCryptic();
+  const { 
+    gateOpen, 
+    viewMode, 
+    setViewMode, 
+    ledgerRecords, 
+    tokens, 
+    beacons, 
+    incidents, 
+    clearUI,
+    syncActive,
+    toggleSync,
+    activeCall,
+    endCall
+  } = useCryptic();
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -38,6 +53,9 @@ const MainLayout: React.FC = () => {
 
       {/* Cosmic Guardian Gate Layer */}
       {!gateOpen && <CosmicGuardian />}
+
+      {/* Active VoIP Call Overlay */}
+      <ActiveCallOverlay call={activeCall} onEndCall={endCall} />
 
       {/* Master Top Header */}
       <Header />
@@ -86,6 +104,34 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Global Real-time Ingestion Sync Toggle */}
+            <button
+              onClick={() => toggleSync()}
+              title={syncActive ? 'Click to Pause Real-time Data Ingestion (ArbitrageMonitor & Telemetry)' : 'Click to Resume Real-time Ingestion'}
+              className={`px-2 py-0.5 rounded border flex items-center gap-1.5 font-bold text-[10px] transition-all duration-200 cursor-pointer ${
+                syncActive
+                  ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                  : 'bg-amber-950/80 border-amber-500/60 text-amber-300 hover:bg-amber-900/80 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${syncActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
+              {syncActive ? (
+                <>
+                  <Pause className="w-2.5 h-2.5 text-emerald-400" />
+                  <span>SYNC: LIVE</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-2.5 h-2.5 text-amber-400" />
+                  <span>SYNC: PAUSED</span>
+                </>
+              )}
+            </button>
+
+            <span className="text-[#42f5ff]/40">|</span>
+            <SignalMonitor />
+
+            <span className="text-[#42f5ff]/40">|</span>
             <span className="text-red-400 font-semibold">
               ACTIVE HAZARDS: {incidents.filter(i => i.status !== 'CONTAINED').length}
             </span>

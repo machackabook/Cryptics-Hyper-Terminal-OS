@@ -28,6 +28,16 @@ import { CloudStorageDashboard } from './modules/CloudStorageDashboard';
 import { WorkspaceConfigurator } from './modules/WorkspaceConfigurator';
 import { NetworkTopologyMap } from './modules/NetworkTopologyMap';
 import { TerrasphereGitHubSync } from './modules/TerrasphereGitHubSync';
+import { FinancialArbitrageModule } from './modules/FinancialArbitrageModule';
+import { ArbitrageMonitor } from './modules/ArbitrageMonitor';
+import { VirtualMobileVoipModule } from './modules/VirtualMobileVoipModule';
+import { NetworkController } from './modules/NetworkController';
+import { SatcomCircularRelayModule } from './modules/SatcomCircularRelayModule';
+import { CallHistoryModule } from './modules/CallHistoryModule';
+import { PaymentGatewayModule } from './modules/PaymentGatewayModule';
+import { CheckpointManagerModule } from './modules/CheckpointManagerModule';
+import { ChatMessageModule } from './modules/ChatMessageModule';
+import { SATCOMMap } from './SATCOMMap';
 
 const SNAP = 12;
 const snapVal = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -125,6 +135,26 @@ export const SnapGrid: React.FC = () => {
         return <NetworkTopologyMap />;
       case 'terrasphere-sync':
         return <TerrasphereGitHubSync />;
+      case 'arbitrage':
+        return <FinancialArbitrageModule />;
+      case 'arbitrage-monitor':
+        return <ArbitrageMonitor />;
+      case 'mobile-voip':
+        return <VirtualMobileVoipModule />;
+      case 'network-controller':
+        return <NetworkController />;
+      case 'satcom-relay':
+        return <SatcomCircularRelayModule />;
+      case 'call-history':
+        return <CallHistoryModule />;
+      case 'payment-gateway':
+        return <PaymentGatewayModule />;
+      case 'checkpoints':
+        return <CheckpointManagerModule />;
+      case 'chat-messages':
+        return <ChatMessageModule />;
+      case 'satcom-map':
+        return <SATCOMMap />;
       default:
         return <TerminalModule />;
     }

@@ -25,7 +25,17 @@ export type ModuleId =
   | 'cloud-storage'
   | 'workspace-configurator'
   | 'network-topology'
-  | 'terrasphere-sync';
+  | 'terrasphere-sync'
+  | 'arbitrage'
+  | 'arbitrage-monitor'
+  | 'mobile-voip'
+  | 'network-controller'
+  | 'satcom-relay'
+  | 'call-history'
+  | 'payment-gateway'
+  | 'checkpoints'
+  | 'chat-messages'
+  | 'satcom-map';
 
 export interface ModuleDefinition {
   id: ModuleId;
@@ -232,5 +242,104 @@ export interface ChromeFlagOption {
   description: string;
   enabled: boolean;
   category: 'gpu' | 'audio' | 'crypto' | 'network';
+}
+
+// Evolutionary Growth Auto-Saving Checkpoint
+export interface SystemCheckpoint {
+  id: string;
+  name: string;
+  timestamp: string;
+  hash: string;
+  growthScore: number;
+  totalTokens: number;
+  totalLedgerRecords: number;
+  activePanelsCount: number;
+  arbitrageBalanceUsd: number;
+  satcomPacketsRelayed: number;
+  stateSnapshot: Record<string, any>;
+  autoSaved: boolean;
+}
+
+// Financial Arbitrage Opportunity & Execution
+export interface ArbitragePair {
+  id: string;
+  symbol: string; // e.g. BTC/USD, ETH/USDT, SOL/USDC
+  exchangeA: { name: string; bid: number; ask: number };
+  exchangeB: { name: string; bid: number; ask: number };
+  spreadPercent: number;
+  potentialProfitUsd: number;
+  status: 'OPTIMAL' | 'EXECUTING' | 'SETTLED' | 'MONITORING';
+  lastUpdated: string;
+}
+
+export interface ArbitrageTradeLog {
+  id: string;
+  timestamp: string;
+  pair: string;
+  buyExchange: string;
+  sellExchange: string;
+  amount: number;
+  profitUsd: number;
+  feeUsd: number;
+  settlementMethod: 'STRIPE_API' | 'CASH_APP_PAY' | 'INTERNAL_LEDGER';
+  txHash: string;
+}
+
+// Virtual Mobile eSIM & VoIP Call/Message
+export interface ESimProfile {
+  id: string;
+  iccid: string;
+  eid: string;
+  carrier: string;
+  status: 'ACTIVE' | 'ROAMING' | 'STANDBY';
+  signalBars: number;
+  dataBalanceGb: number;
+  ipAddress: string;
+  qrCodeSeed: string;
+}
+
+export interface VoipCallSession {
+  id: string;
+  phoneNumber: string;
+  contactName?: string;
+  direction: 'INCOMING' | 'OUTGOING';
+  status: 'RINGING' | 'CONNECTED' | 'ENDED';
+  durationSec: number;
+  codec: 'OPUS_HD' | 'G.711_SOVEREIGN' | 'NOISE_ENCRYPTED';
+  bitrateKbps: number;
+  startTime: string;
+}
+
+export interface TelecommunicationMessage {
+  id: string;
+  sender: string;
+  recipient: string;
+  text: string;
+  type: 'SMS' | 'MMS' | 'SAT_PING';
+  mediaUrl?: string;
+  mediaType?: 'image' | 'telemetry_snapshot' | 'audio';
+  timestamp: string;
+  deliveryStatus: 'DELIVERED' | 'REBOUND_FORWARDED' | 'PENDING';
+  nodeHopPath: string[];
+}
+
+// SATCOM ATSC Circular Rebounding Relay
+export interface SatcomRelayNode {
+  id: string;
+  name: string;
+  type: 'GROUND_BEACON' | 'NODE_CLUSTER' | 'LEO_SATELLITE' | 'ATSC_OTA_TRANSMITTER';
+  lat: number;
+  lng: number;
+  altitudeKm: number;
+  elevationAngleDeg: number;
+  azimuthDeg: number;
+  distanceKmToBeacon: number;
+  lineOfSight: boolean;
+  rfFrequencyMhz: number;
+  dopplerShiftHz: number;
+  reboundRoundTripMs: number;
+  signalStrengthDbm: number;
+  packetsForwarded: number;
+  packetsDropped: number;
 }
 

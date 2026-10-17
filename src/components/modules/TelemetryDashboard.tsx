@@ -66,7 +66,7 @@ interface AgentNode {
 }
 
 export const TelemetryDashboard: React.FC = () => {
-  const { addTerminalLine, addLedger } = useCryptic();
+  const { addTerminalLine, addLedger, syncActive, toggleSync } = useCryptic();
   const [data, setData] = useState<TelemetryPoint[]>([]);
   const [tierSystem, setTierSystem] = useState<'tier-1' | 'tier-2' | 'tier-3' | 'god-sovereign'>('tier-1');
   const [autoReoptimize, setAutoReoptimize] = useState(true);
@@ -110,6 +110,8 @@ export const TelemetryDashboard: React.FC = () => {
     setData(initialData);
 
     const interval = setInterval(() => {
+      if (!syncActive) return;
+
       setData(prev => {
         const nextTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const lastCpu = prev[prev.length - 1]?.cpu || 40;
@@ -136,7 +138,7 @@ export const TelemetryDashboard: React.FC = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [syncActive]);
 
   const handleToggleTier = (tier: 'tier-1' | 'tier-2' | 'tier-3' | 'god-sovereign') => {
     setTierSystem(tier);
@@ -177,6 +179,18 @@ export const TelemetryDashboard: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => toggleSync()}
+            title={syncActive ? 'Pause real-time data sync globally' : 'Resume real-time data sync globally'}
+            className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold flex items-center gap-1.5 shadow transition cursor-pointer ${
+              syncActive 
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${syncActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
+            <span>{syncActive ? 'SYNC: STREAMING' : 'SYNC: PAUSED'}</span>
+          </button>
           <button
             onClick={handleReoptimizeSwarm}
             className="px-3 py-1.5 rounded-lg bg-[#42f5ff]/20 text-[#42f5ff] border border-[#42f5ff]/40 text-[10px] font-bold hover:bg-[#42f5ff]/30 cursor-pointer flex items-center gap-1.5 shadow"

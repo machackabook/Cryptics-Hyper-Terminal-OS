@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Terminal, Globe, Activity, Lock, Cloud, Cpu, Server, Sliders, Database, HardDrive, Zap, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Search, Terminal, Globe, Activity, Lock, Cloud, Cpu, Server, Sliders, Database, HardDrive, Zap, CheckCircle2, RefreshCw, DollarSign, Smartphone, Satellite, TrendingUp, Radio, Phone, MessageSquare } from 'lucide-react';
 import { useCryptic } from '../store/crypticContext';
 import { ModuleId } from '../types';
 
@@ -18,7 +18,7 @@ interface CommandPaletteProps {
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
-  const { openModule, setViewMode, toggle963, showGate } = useCryptic();
+  const { openModule, setViewMode, toggle963, showGate, toggleSync } = useCryptic();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,8 +33,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     { id: 'm-workspace', label: 'Workspace Configurator & Layout', category: 'Modules', icon: Sliders, action: () => openModule('workspace-configurator'), shortcut: 'W' },
     { id: 'm-antigravity', label: 'Antigravity SDK & ADB/OTA Hub', category: 'Modules', icon: Cpu, action: () => openModule('antigravity') },
     { id: 'm-registry', label: 'Searchable MCP Registry', category: 'Modules', icon: Database, action: () => openModule('mcp-registry') },
+    { id: 'm-arbitrage', label: 'Financial Arbitrage & Stripe/Cash App', category: 'Modules', icon: DollarSign, action: () => openModule('arbitrage'), shortcut: 'F' },
+    { id: 'm-arb-monitor', label: 'Arbitrage Monitor (Spread & Volatility σ)', category: 'Modules', icon: Activity, action: () => openModule('arbitrage-monitor'), shortcut: 'B' },
+    { id: 'm-voip', label: 'Mobile VoIP & eSIM Studio (iPhone/Android)', category: 'Modules', icon: Smartphone, action: () => openModule('mobile-voip'), shortcut: 'V' },
+    { id: 'm-net-ctrl', label: 'Network Controller & Cellular Bridge', category: 'Modules', icon: Radio, action: () => openModule('network-controller'), shortcut: 'K' },
+    { id: 'm-satcom', label: 'SATCOM ATSC Circular Rebound Relay', category: 'Modules', icon: Satellite, action: () => openModule('satcom-relay'), shortcut: 'S' },
+    { id: 'm-call-history', label: 'Virtual VoIP Call History & Metadata', category: 'Modules', icon: Phone, action: () => openModule('call-history'), shortcut: 'H' },
+    { id: 'm-payment', label: 'Secure Payment Gateway (Stripe & Cash App Proxy)', category: 'Modules', icon: DollarSign, action: () => openModule('payment-gateway'), shortcut: 'P' },
+    { id: 'm-checkpoints', label: 'Evolutionary Growth Checkpoints Vault', category: 'Modules', icon: TrendingUp, action: () => openModule('checkpoints'), shortcut: 'E' },
+    { id: 'm-chat-messages', label: 'Secure VoIP & Multimedia Chat Stream (Images/Video)', category: 'Modules', icon: MessageSquare, action: () => openModule('chat-messages'), shortcut: 'M' },
+    { id: 'm-satcom-map', label: 'SATCOM Circular Relay & Triangulation Map (SVG Canvas)', category: 'Modules', icon: Satellite, action: () => openModule('satcom-map'), shortcut: 'L' },
     
     // Diagnostics & System Tools
+    { id: 'd-global-sync', label: 'Toggle Global Ingestion Sync (Pause / Resume)', category: 'Diagnostics', icon: RefreshCw, action: () => toggleSync(), shortcut: 'Y' },
     { id: 'd-audit', label: 'Run Soul Stone GOD Policy Audit Sweep', category: 'Diagnostics', icon: CheckCircle2, action: () => openModule('cloud-storage') },
     { id: 'd-963', label: 'Toggle 963Hz Solfeggio Sonification', category: 'Diagnostics', icon: Zap, action: () => toggle963() },
     { id: 'd-sync', label: 'Trigger Ter-a-sphere & GitHub Auto-Refresh', category: 'Diagnostics', icon: RefreshCw, action: () => openModule('terrasphere-sync') },

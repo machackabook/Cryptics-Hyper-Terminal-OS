@@ -27,6 +27,12 @@ import {
   Cloud,
   Sliders,
   RefreshCw,
+  DollarSign,
+  Smartphone,
+  Satellite,
+  TrendingUp,
+  Phone,
+  MessageSquare,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -97,6 +103,16 @@ export const Header: React.FC = () => {
     { id: 'workspace-configurator', label: 'Workspace Configurator & Layout', icon: Sliders },
     { id: 'network-topology', label: 'Network Topology Map (D3)', icon: Globe },
     { id: 'terrasphere-sync', label: 'Terrasphere & GitHub Sync', icon: RefreshCw },
+    { id: 'arbitrage', label: 'Financial Arbitrage & Stripe', icon: DollarSign },
+    { id: 'arbitrage-monitor', label: 'Arbitrage Live Spread & Volatility', icon: TrendingUp },
+    { id: 'mobile-voip', label: 'Mobile VoIP & eSIM Studio', icon: Smartphone },
+    { id: 'network-controller', label: 'Network Controller & Bridge', icon: Radio },
+    { id: 'satcom-relay', label: 'SATCOM ATSC Rebound Relay', icon: Satellite },
+    { id: 'call-history', label: 'Virtual VoIP Call History', icon: Phone },
+    { id: 'payment-gateway', label: 'Secure Payment Gateway (Stripe & Cash App)', icon: DollarSign },
+    { id: 'checkpoints', label: 'Evolutionary Checkpoints', icon: TrendingUp },
+    { id: 'chat-messages', label: 'Secure VoIP & Multimedia Chat', icon: MessageSquare },
+    { id: 'satcom-map', label: 'SATCOM Circular Relay & Triangulation Map', icon: Satellite },
   ];
 
   return (

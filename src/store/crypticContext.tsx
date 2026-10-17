@@ -13,6 +13,7 @@ import {
   ConsensusModelVote,
   IRCMessage,
   UserSession,
+  VoipCallSession,
 } from '../types';
 
 interface CrypticContextType {
@@ -81,6 +82,16 @@ interface CrypticContextType {
   // IRC
   ircMessages: IRCMessage[];
   sendIRC: (channel: string, text: string) => void;
+
+  // Real-time Data Sync Controls
+  syncActive: boolean;
+  setSyncActive: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleSync: (active?: boolean) => void;
+
+  // Active VoIP Call Session
+  activeCall: VoipCallSession | null;
+  startCall: (call: VoipCallSession) => void;
+  endCall: () => void;
 }
 
 const CrypticContext = createContext<CrypticContextType | null>(null);
@@ -230,6 +241,9 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [clearUI, setClearUI] = useState<boolean>(false);
   const [clockMode, setClockMode] = useState<'UTC' | 'LOCAL' | 'SIDEREAL' | 'EPOCH'>('UTC');
   const [systemTimeFormatted, setSystemTimeFormatted] = useState<string>('');
+
+  // Global Real-time Data Ingestion Sync state
+  const [syncActive, setSyncActive] = useState<boolean>(true);
 
   // Audio State
   const [oscillatorActive, setOscillatorActive] = useState(false);
@@ -589,6 +603,46 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
         title = 'ALPHA & HOLOGRAM SYNTHESIZER // SPARSE IMAGING & CGH';
         w = 680;
         h = 520;
+      } else if (moduleId === 'arbitrage') {
+        title = 'FINANCIAL ARBITRAGE & STRIPE/CASH APP GATEWAY';
+        w = 660;
+        h = 500;
+      } else if (moduleId === 'arbitrage-monitor') {
+        title = 'ARBITRAGE MONITOR // REAL-TIME SPREAD & VOLATILITY ENGINE';
+        w = 680;
+        h = 510;
+      } else if (moduleId === 'mobile-voip') {
+        title = 'VIRTUAL MOBILE VOIP & ESIM CHASSIS';
+        w = 720;
+        h = 540;
+      } else if (moduleId === 'network-controller') {
+        title = 'NETWORK CONTROLLER & CELLULAR BRIDGE';
+        w = 700;
+        h = 520;
+      } else if (moduleId === 'satcom-relay') {
+        title = 'SATCOM ATSC CIRCULAR REBOUND RELAY & DATACOM';
+        w = 700;
+        h = 520;
+      } else if (moduleId === 'call-history') {
+        title = 'VIRTUAL VoIP CALL HISTORY & TELEMETRY LOGS';
+        w = 720;
+        h = 520;
+      } else if (moduleId === 'payment-gateway') {
+        title = 'SECURE PAYMENT GATEWAY (STRIPE & CASH APP PROXY)';
+        w = 740;
+        h = 560;
+      } else if (moduleId === 'checkpoints') {
+        title = 'EVOLUTIONARY GROWTH AUTO-SAVING CHECKPOINT VAULT';
+        w = 640;
+        h = 500;
+      } else if (moduleId === 'chat-messages') {
+        title = 'SECURE VoIP & MULTIMEDIA CHAT STREAM';
+        w = 760;
+        h = 560;
+      } else if (moduleId === 'satcom-map') {
+        title = 'SATCOM CIRCULAR RELAY & TRIANGULATION MAP';
+        w = 780;
+        h = 540;
       }
 
       const newPanel: PanelInstanceState = {
@@ -685,6 +739,36 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const clearTerminal = useCallback(() => {
     setTerminalLines([]);
   }, []);
+
+  // Active VoIP Call Session
+  const [activeCall, setActiveCall] = useState<VoipCallSession | null>(null);
+
+  const startCall = useCallback((call: VoipCallSession) => {
+    setActiveCall(call);
+    addTerminalLine(`[VOIP CALL]: Connecting secure call to ${call.phoneNumber} (${call.contactName || 'Peer'})...`, 'good');
+    addLedger('voip.call.started', { phoneNumber: call.phoneNumber, codec: call.codec });
+  }, [addTerminalLine, addLedger]);
+
+  const endCall = useCallback(() => {
+    if (activeCall) {
+      addTerminalLine(`[VOIP CALL]: Call ended with ${activeCall.phoneNumber}. Duration recorded.`, 'system');
+      addLedger('voip.call.ended', { callId: activeCall.id });
+    }
+    setActiveCall(null);
+  }, [activeCall, addTerminalLine, addLedger]);
+
+  // Global Sync toggle handler
+  const toggleSync = useCallback((forceState?: boolean) => {
+    setSyncActive(prev => {
+      const next = typeof forceState === 'boolean' ? forceState : !prev;
+      addTerminalLine(
+        `[GLOBAL DATA SYNC] Real-time stream ${next ? 'RESUMED (LIVE)' : 'PAUSED (STANDBY)'}. ArbitrageMonitor & telemetry components updated.`,
+        next ? 'good' : 'warn'
+      );
+      addLedger('data.sync.toggled', { syncActive: next });
+      return next;
+    });
+  }, [addTerminalLine, addLedger]);
 
   // Emergency Incident Resolution
   const resolveIncident = useCallback((incidentId: string) => {
@@ -1105,6 +1189,48 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    if (lower === 'arbitrage' || lower === 'stripe' || lower === 'cashapp' || lower === 'trade') {
+      openModule('arbitrage');
+      addTerminalLine('[FINANCIAL ARBITRAGE] Cross-exchange scanner & Stripe/Cash App gateway active.', 'good');
+      return;
+    }
+
+    if (lower === 'voip' || lower === 'esim' || lower === 'call' || lower === 'sms' || lower === 'mms') {
+      openModule('mobile-voip');
+      addTerminalLine('[MOBILE TELECOM] Virtual iPhone/Android VoIP dialer and eSIM studio mounted.', 'good');
+      return;
+    }
+
+    if (lower === 'satcom' || lower === 'atsc' || lower === 'rebound' || lower === 'relay') {
+      openModule('satcom-relay');
+      addTerminalLine('[SATCOM ATSC RELAY] Circular rebounding signal loop & triangulation datacom engaged.', 'good');
+      return;
+    }
+
+    if (lower === 'checkpoint' || lower === 'checkpoints' || lower === 'snapshot' || lower === 'growth') {
+      openModule('checkpoints');
+      addTerminalLine('[EVOLUTIONARY CHECKPOINTS] 30s auto-save checkpoint vault & state rollback engine loaded.', 'good');
+      return;
+    }
+
+    if (lower === 'sync') {
+      const sub = args[0]?.toLowerCase();
+      if (sub === 'on' || sub === 'start' || sub === 'resume') {
+        toggleSync(true);
+      } else if (sub === 'off' || sub === 'pause' || sub === 'stop') {
+        toggleSync(false);
+      } else {
+        toggleSync();
+      }
+      return;
+    }
+
+    if (lower === 'arbitragemonitor' || lower === 'arbmonitor') {
+      openModule('arbitrage-monitor');
+      addTerminalLine('[ARBITRAGE MONITOR] Live spread and volatility panel engaged.', 'good');
+      return;
+    }
+
     addTerminalLine(`Unknown command: "${cmd}". Type "help" for command matrix.`, 'warn');
   }, [
     addTerminalLine,
@@ -1178,6 +1304,12 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
         runConsensusQuorum,
         ircMessages,
         sendIRC,
+        syncActive,
+        setSyncActive,
+        toggleSync,
+        activeCall,
+        startCall,
+        endCall,
       }}
     >
       {children}
