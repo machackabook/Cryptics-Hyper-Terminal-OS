@@ -57,6 +57,9 @@ const MainLayout: React.FC = () => {
       {/* Active VoIP Call Overlay */}
       <ActiveCallOverlay call={activeCall} onEndCall={endCall} />
 
+      <aside role="status" className="fixed left-0 right-0 bottom-8 z-50 bg-[#030d1a] border-t border-[#f5ce70] px-3 py-1 text-[10px] text-[#f5ce70]">
+        PREVIEW: legacy telemetry, agents, tokens and calls are simulations. Native services require separate authorization.
+      </aside>
       {/* Master Top Header */}
       <Header />
 
@@ -87,7 +90,7 @@ const MainLayout: React.FC = () => {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-[#74ff9b] font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-[#74ff9b] animate-ping inline-block" />
-              SYS.OP.REAL
+              SYS.PREVIEW
             </span>
             <span className="hidden sm:inline text-[#42f5ff]/40">|</span>
             <span className="hidden sm:inline text-[#42f5ff]">
@@ -104,10 +107,10 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Global Real-time Ingestion Sync Toggle */}
+            {/* Global Simulated Ingestion Sync Toggle */}
             <button
               onClick={() => toggleSync()}
-              title={syncActive ? 'Click to Pause Real-time Data Ingestion (ArbitrageMonitor & Telemetry)' : 'Click to Resume Real-time Ingestion'}
+              title={syncActive ? 'Click to Pause Simulated Data Ingestion (ArbitrageMonitor & Telemetry)' : 'Click to Resume Real-time Ingestion'}
               className={`px-2 py-0.5 rounded border flex items-center gap-1.5 font-bold text-[10px] transition-all duration-200 cursor-pointer ${
                 syncActive
                   ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
@@ -118,7 +121,7 @@ const MainLayout: React.FC = () => {
               {syncActive ? (
                 <>
                   <Pause className="w-2.5 h-2.5 text-emerald-400" />
-                  <span>SYNC: LIVE</span>
+                  <span>DEMO: RUNNING</span>
                 </>
               ) : (
                 <>

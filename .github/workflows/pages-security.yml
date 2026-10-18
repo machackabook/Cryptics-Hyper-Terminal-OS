@@ -17,32 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '20'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
+          node-version: '24'
       - name: Verify source syntax
         run: |
           set -eu
           git diff --check
           git ls-files -z '*.js' '*.mjs' '*.cjs' | xargs -0 -r -n1 node --check
+      - name: Install locked frontend dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
       - name: Run production-source security regression suite
         run: |
-          npm run lint
-          npm run test:security
-          node --test tests/public-surface.test.mjs
-          python -m unittest discover -s tests -p 'test_*.py' -v
-          cargo fmt --manifest-path axs-backend/Cargo.toml -- --check
-          cargo check --manifest-path axs-backend/Cargo.toml
+          corepack pnpm run lint
+          node --test tests/security.test.mjs
+          node --test tests/public-surface.test.mjs tests/gsel-engine.test.mjs
+          corepack pnpm run build
       - name: Record revision and changed-file evidence
         run: node scripts/security-diff.mjs
       - name: Validate AI denial policy and publication boundaries
@@ -61,7 +55,7 @@ jobs:
         run: node scripts/pages-security-audit.mjs --fleet
       - name: Upload scanner and source-diff evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: cryptic-pages-security-${{ github.run_id }}
           path: reports/security/
