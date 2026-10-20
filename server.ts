@@ -1,3 +1,4 @@
+import {catalogStatus, listRemoteEnclave} from './src/enclave/httpfs.mjs';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'node:path';
@@ -51,6 +52,35 @@ export function createApp() {
     if(!['gemini','aeon'].includes(provider))return res.status(404).json({ok:false,status:'UNKNOWN_PROVIDER'});
     return res.status(501).json(notConfigured('ai.'+provider));
   });
+  // Native Google Drive connector availability in ChatGPT does not grant
+  // this standalone app OAuth credentials. A separately authorized rclone
+  // profile on THIS host is needed before remote listing becomes functional.
+  // No writable FS access or shell command execution is exposed to the UI.
+  app.get('/api/enclaves',(_req,res)=>res.json(catalogStatus()));
+  const enclaveRequests=new Map<string,{last:number}>();
+  app.get('/api/enclaves/:id/list',async(req,res)=>{
+    const section=req.query.section===undefined?'root':String(req.query.section);
+    const client=req.socket.remoteAddress||'';
+    if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(client)){
+      return res.status(403).json({ok:false,status:'LOCAL_ONLY'});
+    }
+    const origin=req.get('origin');
+    if(origin){
+      try{if(!['localhost','127.0.0.1','[::1]'].includes(new URL(origin).hostname))
+          return res.status(403).json({ok:false,status:'ORIGIN_DENIED'})}
+      catch{return res.status(403).json({ok:false,status:'ORIGIN_DENIED'})}
+    }
+    const last=enclaveRequests.get(client)?.last||0;
+    if(Date.now()-last<1500)return res.status(429).json({ok:false,status:'RATE_LIMITED'});
+    enclaveRequests.set(client,{last:Date.now()});
+    try{return res.json(await listRemoteEnclave(req.params.id,section))}
+    catch(e:any){
+      const code=e?.code||'PROVIDER_UNAVAILABLE';
+      return res.status(code==='NOT_CONFIGURED'?503:code==='UNKNOWN_ENCLAVE'?404:code==='INVALID_SECTION'?400:502)
+        .json({ok:false,status:code,mounted:false,error:String(e?.message||code).slice(0,180)});
+    }
+  });
+
   // Golden Forge analysis gateway. Google Gemini interprets *declared* browser
   // market data; it neither sources executable prices nor authorizes trades.
   // Disabled until deliberately configured. No key crosses to the browser.
