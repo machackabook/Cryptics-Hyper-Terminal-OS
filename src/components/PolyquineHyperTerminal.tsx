@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Download,Terminal,X} from 'lucide-react';
 import {polyquineVfs as vfs} from '../services/polyquineVfs';
+import {agentIdentity,agentFabricManifest,dispatchAgentTransfer} from '../services/adamAgentFabric';
 type Entry={kind:'input'|'output'|'error',text:string};
 export const PolyquineHyperTerminal:React.FC<{onClose:()=>void}>=({onClose})=>{
  const [cwd,setCwd]=useState('/root'),[input,setInput]=useState(''),[lines,setLines]=useState<Entry[]>([{kind:'output',text:'POLYQUINE // Browser VFS terminal. Commands: help, pwd, ls, cd, cat, mkdir, write, append, rm, clear, quine export, logs. No host OS execution.'}]);
@@ -12,7 +13,7 @@ export const PolyquineHyperTerminal:React.FC<{onClose:()=>void}>=({onClose})=>{
  try{
   const [command,...rest]=raw.split(/\s+/),arg=rest[0];
   switch(command.toLowerCase()){
-   case 'help':emit('output','help, pwd, ls [path], cd [path], cat <path>, mkdir <path>, write <path> <text>, append <path> <text>, rm <path>, logs, quine export, clear');break;
+   case 'help':emit('output','help, pwd, ls [path], cd [path], cat <path>, mkdir <path>, write <path> <text>, append <path> <text>, rm <path>, agent manifest, agent path <1..6000>, agent send <slot> <destination> <text>, logs, quine export, clear');break;
    case 'pwd':emit('output',cwd);break;
    case 'ls':emit('output',vfs.ls(cwd,arg).join('   ')||'(empty)');break;
    case 'cd':setCwd(vfs.cd(cwd,arg));break;
@@ -20,6 +21,20 @@ export const PolyquineHyperTerminal:React.FC<{onClose:()=>void}>=({onClose})=>{
    case 'mkdir':if(!arg)throw Error('Missing path');emit('output',vfs.mkdir(cwd,arg));break;
    case 'write':case 'append':if(!arg)throw Error('Missing path');vfs.write(cwd,arg,rest.slice(1).join(' '),command.toLowerCase()==='append');emit('output','Saved '+vfs.normalize(cwd,arg));break;
    case 'rm':if(!arg)throw Error('Missing path');vfs.rm(cwd,arg);emit('output','Removed '+arg);break;
+   case 'agent': {
+     if(arg==='manifest') emit('output',JSON.stringify(agentFabricManifest(),null,2));
+     else if(arg==='path') emit('output',JSON.stringify(agentIdentity(Number(rest[1])),null,2));
+     else if(arg==='send') {
+       const slot=Number(rest[1]),destination=rest[2],payload=rest.slice(3).join(' ');
+       if(!destination||!payload)throw Error('Usage: agent send <slot> <destination> <text>');
+       const identity=agentIdentity(slot);
+       const receipt=dispatchAgentTransfer({agent:slot,source:identity.inbox,destination,payload},(path,text)=>{
+         const parts=path.split('/');parts.pop();vfs.mkdir('/',parts.join('/')||'/');vfs.write('/',path,text);
+       });
+       emit(receipt.state==='failed'?'error':'output',JSON.stringify(receipt,null,2));
+     } else throw Error('Usage: agent manifest | agent path <slot> | agent send <slot> <destination> <text>');
+     break;
+   }
    case 'logs':emit('output','Local browser session only. This command does not certify legal or AI compliance.');break;
    case 'quine':if(arg!=='export')throw Error('Usage: quine export');download('polyquine-vfs-snapshot.json',vfs.export());emit('output','VFS snapshot exported. This is a state export, not an executable self-replicating quine.');break;
    case 'clear':setLines([]);break;
