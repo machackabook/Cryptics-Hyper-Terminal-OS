@@ -10,7 +10,9 @@
     "start": "node server.ts",
     "lint": "tsc --noEmit",
     "test:gsel": "node --test tests/gsel-engine.test.mjs",
-    "test:polyglot": "node --test tests/polyglot.test.mjs"
+    "test:polyglot": "node --test tests/polyglot.test.mjs",
+    "test:forge": "node --test tests/golden-forge.test.mjs",
+    "test:all": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@types/d3": "^7.4.3",
