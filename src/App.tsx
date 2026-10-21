@@ -8,6 +8,7 @@ import { PersistentBackgroundFX } from './components/PersistentBackgroundFX';
 import { InteractiveGlobeModule } from './components/modules/InteractiveGlobeModule';
 import { GalaxiesSkyboxModule } from './components/modules/GalaxiesSkyboxModule';
 import { CommandPalette } from './components/CommandPalette';
+import { PolyquineHyperTerminal } from './components/PolyquineHyperTerminal';
 import { SignalMonitor } from './components/SignalMonitor';
 import { ActiveCallOverlay } from './components/ActiveCallOverlay';
 import { Activity, Radio, Shield, Globe, Terminal, Sparkles, Play, Pause, RefreshCw } from 'lucide-react';
@@ -28,6 +29,7 @@ const MainLayout: React.FC = () => {
     endCall
   } = useCryptic();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [polyquineOpen, setPolyquineOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,6 +82,9 @@ const MainLayout: React.FC = () => {
           </div>
         )}
       </main>
+
+      {gateOpen && <button type="button" onClick={() => setPolyquineOpen(value => !value)} className="fixed right-4 bottom-12 z-30 rounded-xl border border-cyan-500/70 bg-slate-950/90 text-cyan-300 px-3 py-2 text-xs font-bold" aria-label="Toggle Polyquine terminal">⌘ POLYQUINE</button>}
+      {gateOpen && polyquineOpen && <PolyquineHyperTerminal onClose={() => setPolyquineOpen(false)} />}
 
       {/* Bottom Floating Status Bar */}
       {!clearUI && (
