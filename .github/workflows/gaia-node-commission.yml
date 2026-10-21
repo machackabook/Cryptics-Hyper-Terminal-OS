@@ -1,0 +1,27 @@
+name: GAIA Chromebook Commissioning Checks
+on:
+  push:
+    paths:
+      - 'scripts/gaia-node-commission.sh'
+      - '.github/workflows/gaia-node-commission.yml'
+  pull_request:
+    paths:
+      - 'scripts/gaia-node-commission.sh'
+      - '.github/workflows/gaia-node-commission.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  syntax-and-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax
+        run: bash -n scripts/gaia-node-commission.sh
+      - name: Ensure no embedded credentials or remote destructive sync
+        run: |
+          ! grep -En '(access_token|refresh_token|rclone (sync|purge|delete)|rm -rf)' scripts/gaia-node-commission.sh
+      - name: Ensure no unattended OAuth bypass
+        run: |
+          grep -Fq 'rclone config' scripts/gaia-node-commission.sh
+          grep -Fq 'sha256sum' scripts/gaia-node-commission.sh
