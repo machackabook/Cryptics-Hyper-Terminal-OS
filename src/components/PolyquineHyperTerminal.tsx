@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Download,Terminal,X} from 'lucide-react';
 import {polyquineVfs as vfs} from '../services/polyquineVfs';
 import {agentIdentity,agentFabricManifest,dispatchAgentTransfer} from '../services/adamAgentFabric';
+import {makeAgentCard,saveAgentCard,getAgentCard,recordAgentOutcome,routeModel,AgentKind} from '../services/adamAgentCards';
 type Entry={kind:'input'|'output'|'error',text:string};
 export const PolyquineHyperTerminal:React.FC<{onClose:()=>void}>=({onClose})=>{
  const [cwd,setCwd]=useState('/root'),[input,setInput]=useState(''),[lines,setLines]=useState<Entry[]>([{kind:'output',text:'POLYQUINE // Browser VFS terminal. Commands: help, pwd, ls, cd, cat, mkdir, write, append, rm, clear, quine export, logs. No host OS execution.'}]);
@@ -13,7 +14,7 @@ export const PolyquineHyperTerminal:React.FC<{onClose:()=>void}>=({onClose})=>{
  try{
   const [command,...rest]=raw.split(/\s+/),arg=rest[0];
   switch(command.toLowerCase()){
-   case 'help':emit('output','help, pwd, ls [path], cd [path], cat <path>, mkdir <path>, write <path> <text>, append <path> <text>, rm <path>, agent manifest, agent path <1..6000>, agent send <slot> <destination> <text>, logs, quine export, clear');break;
+   case 'help':emit('output','help, pwd, ls [path], cd [path], cat <path>, mkdir <path>, write <path> <text>, append <path> <text>, rm <path>, agent manifest, agent path <1..6000>, agent send <slot> <destination> <text>, card create <slot> <kind> <host> <runtimeKey>, card show <slot>, card outcome <slot> <ok|fail>, logs, quine export, clear');break;
    case 'pwd':emit('output',cwd);break;
    case 'ls':emit('output',vfs.ls(cwd,arg).join('   ')||'(empty)');break;
    case 'cd':setCwd(vfs.cd(cwd,arg));break;
@@ -34,6 +35,19 @@ export const PolyquineHyperTerminal:React.FC<{onClose:()=>void}>=({onClose})=>{
        emit(receipt.state==='failed'?'error':'output',JSON.stringify(receipt,null,2));
      } else throw Error('Usage: agent manifest | agent path <slot> | agent send <slot> <destination> <text>');
      break;
+   }
+   case 'card': {
+     if(arg==='create'){
+       const slot=Number(rest[1]),kind=rest[2] as AgentKind,host=rest[3],runtimeKey=rest[4];
+       if(!['process','program','function','junction','service-worker','packet-handler','event'].includes(kind)||!host||!runtimeKey)throw Error('Usage: card create <slot> <kind> <host> <runtimeKey>');
+       const card=makeAgentCard({slot,kind,host,runtimeKey,displayName:runtimeKey,owner:'local-operator'});
+       const location=saveAgentCard(card);emit('output',JSON.stringify({card,location},null,2));
+     }else if(arg==='show'){
+       const card=getAgentCard(Number(rest[1]));if(!card)throw Error('Agent card not registered');emit('output',JSON.stringify({...card,routing:routeModel(card)},null,2));
+     }else if(arg==='outcome'){
+       if(!['ok','fail'].includes(rest[2]))throw Error('Usage: card outcome <slot> <ok|fail>');
+       emit('output',JSON.stringify(recordAgentOutcome(Number(rest[1]),rest[2]==='ok'),null,2));
+     }else throw Error('Usage: card create|show|outcome');break;
    }
    case 'logs':emit('output','Local browser session only. This command does not certify legal or AI compliance.');break;
    case 'quine':if(arg!=='export')throw Error('Usage: quine export');download('polyquine-vfs-snapshot.json',vfs.export());emit('output','VFS snapshot exported. This is a state export, not an executable self-replicating quine.');break;
