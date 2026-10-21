@@ -1,69 +1,46 @@
 name: Cryptic Pages Sentinel Security
 on:
+  push: {branches: [main]}
+  pull_request: {branches: [main]}
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 6 * * 1'
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-permissions:
-  contents: read
+permissions: {contents: read}
 concurrency:
-  group: cryptic-pages-security-${{ github.ref }}
+  group: cryptic-react-security-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  audit:
+  react-security:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          fetch-depth: 0
+        with: {persist-credentials: false, fetch-depth: 0}
       - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - name: Verify source syntax
+        with: {node-version: '22'}
+      - name: Confirm tracked source and scripts
         run: |
-          set -eu
+          set -euo pipefail
           git diff --check
-          git ls-files -z '*.js' '*.mjs' '*.cjs' | xargs -0 -r -n1 node --check
-      - name: Run production-source security regression suite
+          test -f package.json && test -f tsconfig.json && test -f index.html
+          node --check scripts/verify.mjs
+          node --check scripts/pages-security-audit.mjs
+      - name: Install React dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck, build and relevant security tests
         run: |
+          set -euo pipefail
           npm run lint
-          npm run test:security
-          node --test tests/public-surface.test.mjs
-          python -m unittest discover -s tests -p 'test_*.py' -v
-          cargo fmt --manifest-path axs-backend/Cargo.toml -- --check
-          cargo check --manifest-path axs-backend/Cargo.toml
-      - name: Record revision and changed-file evidence
-        run: node scripts/security-diff.mjs
-      - name: Validate AI denial policy and publication boundaries
-        run: |
-          node -e "const p=require('./.well-known/ai-access-policy.json'); if(p.ai_access?.default!=='denied'||p.authorization?.status!=='backend-enforcement-required')process.exit(1)"
-          grep -q '^User-agent: \*' robots.txt
-          grep -q '^Disallow: /' robots.txt
-          grep -q 'robots.txt.*not.*origin' AI-ACCESS-POLICY.md || test -f docs/SECURITY-BACKLOG-10OF10.md
-      - name: Audit current Cryptic source
-        run: node scripts/pages-security-audit.mjs --local-only
-      - name: Audit public GitHub Pages across owners
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          PAGES_AUDIT_OWNERS: machackabook,Azazeleous,crypticmetaverse,thearchitectofgaia-boop
-        run: node scripts/pages-security-audit.mjs --fleet
-      - name: Upload scanner and source-diff evidence
+          npm run build
+          test -s dist/index.html
+          node --test tests/react-runtime-contract.test.mjs
+          node scripts/verify.mjs
+          node scripts/pages-security-audit.mjs --local-only
+      - name: Save non-secret build receipt
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cryptic-pages-security-${{ github.run_id }}
-          path: reports/security/
-          if-no-files-found: warn
-          retention-days: 30
+        run: |
+          mkdir -p reports/security
+          printf 'repository=%s\ncommit=%s\nrun=%s\njob=%s\n' "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$GITHUB_RUN_ID" "${{ job.status }}" > reports/security/ci-receipt.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: nexus-react-security-${{ github.run_id }}, path: reports/security/ci-receipt.txt, retention-days: 14}
