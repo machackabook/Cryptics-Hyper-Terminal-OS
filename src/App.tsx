@@ -9,6 +9,7 @@ import { InteractiveGlobeModule } from './components/modules/InteractiveGlobeMod
 import { GalaxiesSkyboxModule } from './components/modules/GalaxiesSkyboxModule';
 import { CommandPalette } from './components/CommandPalette';
 import { PolyquineHyperTerminal } from './components/PolyquineHyperTerminal';
+import { OmniCapabilityPanel } from './components/OmniCapabilityPanel';
 import { SignalMonitor } from './components/SignalMonitor';
 import { ActiveCallOverlay } from './components/ActiveCallOverlay';
 import { Activity, Radio, Shield, Globe, Terminal, Sparkles, Play, Pause, RefreshCw } from 'lucide-react';
@@ -30,6 +31,7 @@ const MainLayout: React.FC = () => {
   } = useCryptic();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [polyquineOpen, setPolyquineOpen] = useState(false);
+  const [omniPanelOpen, setOmniPanelOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,6 +87,8 @@ const MainLayout: React.FC = () => {
 
       {gateOpen && <button type="button" onClick={() => setPolyquineOpen(value => !value)} className="fixed right-4 bottom-12 z-30 rounded-xl border border-cyan-500/70 bg-slate-950/90 text-cyan-300 px-3 py-2 text-xs font-bold" aria-label="Toggle Polyquine terminal">⌘ POLYQUINE</button>}
       {gateOpen && polyquineOpen && <PolyquineHyperTerminal onClose={() => setPolyquineOpen(false)} />}
+      {gateOpen && <button type="button" onClick={() => setOmniPanelOpen(v => !v)} className="fixed right-40 bottom-12 z-30 rounded-xl border border-amber-400/70 bg-slate-950/90 text-amber-200 px-3 py-2 text-xs font-bold" aria-label="Toggle OmniApp capability panel">⚛ OMNIAPP</button>}
+      {gateOpen && omniPanelOpen && <OmniCapabilityPanel onClose={() => setOmniPanelOpen(false)} />}
 
       {/* Bottom Floating Status Bar */}
       {!clearUI && (
