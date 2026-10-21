@@ -1,0 +1,37 @@
+name: ADAM Continuous Remedy Intake
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '11 */6 * * *'
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: adam-remedy-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run Golden Forge source discovery
+        run: node scripts/golden-forge.mjs
+      - name: Generate ADAM remedy jobs
+        run: node scripts/adam-remedy-loop.mjs
+      - name: Verify generated job pool
+        run: |
+          node --input-type=module -e "import fs from 'node:fs';const p=JSON.parse(fs.readFileSync('reports/golden-forge/remedy-pool.json'));if(!Array.isArray(p.jobs)||p.jobs.length===0)process.exit(1)"
+      - name: Publish actionable remedy queue
+        uses: actions/upload-artifact@v4
+        with:
+          name: adam-remedy-pool-${{ github.run_id }}
+          path: reports/golden-forge/
+          if-no-files-found: error
+          retention-days: 30
