@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate canonical worker and workflow names
+        run: node scripts/adam-naming-contract.mjs
       - name: Generate source-to-agent discovery inventory
         run: node scripts/golden-forge.mjs
       - name: Verify discovery artifacts
