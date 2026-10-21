@@ -1,0 +1,24 @@
+name: GAIA Worker Router Verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/gaia-worker-router.mjs'
+      - 'tests/gaia-worker-router.test.mjs'
+      - '.github/workflows/gaia-worker-router.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  worker-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run worker authority and routing tests
+        run: node --test tests/gaia-worker-router.test.mjs
