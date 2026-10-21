@@ -1,3 +1,4 @@
+import {requiresAgreement} from './gaia-capability-grants.mjs';
 // GAIA browser/AI worker registry. Node 22+, no external dependencies.
 // Browser adapters run in separately installed, authorized worker processes.
 // ADAM certification occurs at deployment/promotion, never as a per-request dependency.
@@ -25,12 +26,13 @@ export function validateOperation(op){
  if(typeof op.authority!=='string'||!op.authority.trim())throw Error('Missing authority');
  return Object.freeze({...op});
 }
-export async function executeWithReceipt(operation,workers,executor){
+export async function executeWithReceipt(operation,workers,executor,grants){
  const op=validateOperation(operation);
  const worker=resolveWorker(op,workers);
  const receipt={schema:'gaia.execution.receipt.v1',operationId:op.id,capability:op.capability,
   workerId:worker?.id??null,status:'queued',certification:worker?.certification?.status??'not_recorded',timestamp:new Date().toISOString()};
  if(!worker)return {...receipt,status:'remedy_required',reason:'No authorized worker with matching capability'};
+ if(requiresAgreement(op.capability) && (!grants || !grants.allowed(op)))return {...receipt,status:'consent_required',reason:'User agreement missing, expired or revoked'};
  try{
   const result=await executor(worker,op);
   return {...receipt,status:'completed',result};
