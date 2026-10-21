@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/gaia-worker-router.mjs'
+      - 'scripts/gaia-capability-grants.mjs'
       - 'tests/gaia-worker-router.test.mjs'
       - '.github/workflows/gaia-worker-router.yml'
   workflow_dispatch:
