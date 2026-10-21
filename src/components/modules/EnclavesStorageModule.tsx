@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {EnclaveHttpfsMount} from './EnclaveHttpfsMount';
 import { useCryptic } from '../../store/crypticContext';
 import {
   Shield,
@@ -27,9 +28,9 @@ import {
 import { EnclaveRecord, MountableImage } from '../../types';
 
 export const EnclavesStorageModule: React.FC = () => {
-  const { addLedger, addTerminalLine, mintToken } = useCryptic();
+  const { addLedger, addTerminalLine } = useCryptic();
 
-  const [activeTab, setActiveTab] = useState<'enclaves' | 'dmg' | 'prime' | 'drive'>('enclaves');
+  const [activeTab, setActiveTab] = useState<'httpfs' | 'enclaves' | 'dmg' | 'prime' | 'drive'>('httpfs');
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   // =========================================================================
@@ -106,21 +107,16 @@ export const EnclavesStorageModule: React.FC = () => {
 
   const [verifyingEnclave, setVerifyingEnclave] = useState<string | null>(null);
 
+  // Legacy specimen entries are no longer promoted as hardware-attested.
   const handleVerifyEnclave = async (id: string, name: string) => {
     setVerifyingEnclave(id);
-    await new Promise((r) => setTimeout(r, 600));
-    const token = await mintToken(`enclave.verify.${id}`);
-    setEnclaves((prev) =>
-      prev.map((e) =>
-        e.id === id ? { ...e, status: 'SYNCHRONIZED', lastStamp: new Date().toISOString() } : e
-      )
-    );
-    addLedger('enclave.verified', { id, name, receipt: token.fp });
-    addTerminalLine(`[ENCLAVE VERIFIED] ${name} status=SYNCHRONIZED · attestation=${token.fp}`, 'good');
+    addLedger('enclave.verify.unavailable', { id, name, status: 'UNVERIFIED' });
+    addTerminalLine('[ENCLAVE] '+name+' is historical UI data; no TEE/SGX attestation was performed.', 'warn');
     setVerifyingEnclave(null);
   };
 
   const handleToggleIsolate = (id: string, name: string) => {
+    addTerminalLine('[ENCLAVE] Local demonstration policy toggle; hardware isolation not changed.', 'warn');
     setEnclaves((prev) =>
       prev.map((e) => {
         if (e.id !== id) return e;
@@ -144,7 +140,7 @@ export const EnclavesStorageModule: React.FC = () => {
       sizeBytes: 505413632,
       sizeFormatted: '482.0 MB',
       mountPoint: '/Volumes/CrypticHyperTerminal',
-      mounted: true,
+      mounted: false,
       checksumSha256: 'sha256:39bf2a80145cbe49021e89fbc0013928174129',
       filesystem: 'APFS',
       filesCount: 142,
@@ -157,7 +153,7 @@ export const EnclavesStorageModule: React.FC = () => {
       sizeBytes: 1288490188,
       sizeFormatted: '1.20 GB',
       mountPoint: '/mnt/gaia-sentinel',
-      mounted: true,
+      mounted: false,
       checksumSha256: 'sha256:91ef2b801a2408c991823abce0018374921029',
       filesystem: 'ext4',
       filesCount: 894,
@@ -224,18 +220,10 @@ export const EnclavesStorageModule: React.FC = () => {
     ],
   };
 
+  // Native disk-image attachment is a host OS operation, not a React state change.
   const handleToggleMount = async (id: string, filename: string, currentlyMounted: boolean) => {
-    setMountingId(id);
-    await new Promise((r) => setTimeout(r, 500));
-    setImages((prev) =>
-      prev.map((img) => (img.id === id ? { ...img, mounted: !currentlyMounted } : img))
-    );
-    const action = currentlyMounted ? 'unmount' : 'mount';
-    addLedger(`system_image.${action}`, { id, filename });
-    addTerminalLine(
-      `[SYSTEM STORAGE] Image ${filename} ${action.toUpperCase()}ED successfully.`,
-      currentlyMounted ? 'warn' : 'good'
-    );
+    addLedger('system_image.mount.unavailable', { id, filename, status: 'UNVERIFIED' });
+    addTerminalLine('[ENCLAVE] '+filename+' is a legacy catalogue specimen. Use HTTPFS and the verified host-side native mount flow.', 'warn');
     setMountingId(null);
   };
 
@@ -451,7 +439,11 @@ export const EnclavesStorageModule: React.FC = () => {
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center bg-[#061426] p-0.5 rounded-lg border border-[#42f5ff]/20 text-[10px]">
+        <div className="flex flex-wrap items-center bg-[#061426] p-0.5 rounded-lg border border-[#42f5ff]/20 text-[10px]">
+          <button type="button" onClick={() => setActiveTab('httpfs')}
+            className={`px-2 py-1 rounded ${activeTab === 'httpfs' ? 'bg-[#42f5ff] text-[#02050b] font-bold' : 'text-[#8aa0b6] hover:text-white'}`}>
+            DRIVE HTTPFS (LIVE CHECK)
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab('enclaves')}
@@ -505,6 +497,7 @@ export const EnclavesStorageModule: React.FC = () => {
 
       {/* Main Content Pane */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        {activeTab === 'httpfs' && <EnclaveHttpfsMount />}
         {/* ========================================================================= */}
         {/* TAB 1: GOVERNING ENCLAVES */}
         {/* ========================================================================= */}
@@ -514,12 +507,12 @@ export const EnclavesStorageModule: React.FC = () => {
               <div>
                 <span className="text-[#42f5ff] font-bold">SOVEREIGN ENCLAVE FEDERATION:</span>
                 <span className="text-[#8aa0b6] ml-1.5">
-                  6 governing enclaves enforcing fail-closed zero-leak isolation policies.
+                  6 archived enclave specimens; hardware attestation and operational status NOT VERIFIED.
                 </span>
               </div>
               <span className="text-[#74ff9b] font-bold flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-[#74ff9b] animate-ping" />
-                ONLINE
+                NOT VERIFIED
               </span>
             </div>
 
@@ -599,7 +592,7 @@ export const EnclavesStorageModule: React.FC = () => {
               <div>
                 <span className="text-[#42f5ff] font-bold">FUNCTIONAL SYSTEM IMAGES:</span>
                 <span className="text-[#8aa0b6] ml-1.5">
-                  Mountable DMG, ISO, and Sparse raw disk images with cryptographic SHA-256 integrity.
+                  LEGACY DISPLAY ONLY — hashes and file counts are unverified; native mount disabled.
                 </span>
               </div>
               <span className="text-[#74ff9b] font-bold">
@@ -910,13 +903,13 @@ export const EnclavesStorageModule: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  addLedger('drive.sync.completed', {
+                  addLedger('drive.sync.not_verified', {
                     driveIndex: 'CONTINUUM-ENCLAVE-137451921129154222',
                     driveId: '1Ohp6ZMX02NvFayJfivgXbP4PUMztYUvU',
                   });
                   addTerminalLine(
-                    '[DRIVE ENCLAVE SYNC] CONTINUUM-ENCLAVE-137451921129154222 verified with 4 canonical artifacts.',
-                    'good'
+                    '[DRIVE] Legacy index references displayed; no live sync or provider verification performed.',
+                    'warn'
                   );
                 }}
                 className="px-3 py-1.5 rounded-lg bg-[#42f5ff]/20 text-[#42f5ff] hover:bg-[#42f5ff]/30 border border-[#42f5ff]/40 font-bold transition cursor-pointer flex items-center gap-1"

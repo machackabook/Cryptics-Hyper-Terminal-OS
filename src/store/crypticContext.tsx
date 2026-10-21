@@ -1,3 +1,4 @@
+import { dispatchHyperterminal } from '../../polyglot/quine-os.js';
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ModuleId,
@@ -840,6 +841,15 @@ export const CrypticProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const execCommand = useCallback(async (raw: string) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
+    // Shared HyperTerminal Polyglot Quine OS precedence: never pass unverified
+    // native/inference commands to legacy presentation-only branches.
+    const polyglot = await dispatchHyperterminal(trimmed);
+    if (polyglot.handled) {
+      addTerminalLine(`polyglot> ${trimmed.split(/\s+/)[0]}`, 'user');
+      addTerminalLine(polyglot.message, polyglot.kind === 'good' ? 'good' : polyglot.kind === 'warn' ? 'warn' : 'system');
+      addLedger('polyglot.command', { cmd: trimmed.split(/\s+/)[0], verified: polyglot.kind === 'good' });
+      return polyglot.value ?? polyglot;
+    }
     addTerminalLine(`cryptic> ${trimmed}`, 'user');
     addLedger('terminal.command', { cmd: trimmed.split(' ')[0] });
 

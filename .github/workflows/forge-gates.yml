@@ -1,0 +1,40 @@
+name: Golden Forge / Polyglot Verification
+on:
+  push:
+    branches: [feature/hyperterminal-polyglot-quine-os-v17]
+  pull_request:
+    paths:
+      - 'src/forge/**'
+      - 'src/components/modules/GoldenForgeFinancialModule.tsx'
+      - 'src/components/modules/FinancialArbitrageModule.tsx'
+      - 'src/components/modules/PaymentGatewayModule.tsx'
+      - 'src/components/modules/ArbitrageMonitor.tsx'
+      - 'server.ts'
+      - 'tests/**'
+      - 'package.json'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install (no lifecycle scripts)
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Unit tests (math/parser/denial gates)
+        run: npm run test:forge && npm run test:polyglot
+      - name: TypeScript diagnostics
+        run: npm run lint
+      - name: Browser production bundle
+        run: npm run build
+      - name: Explicit production evidence status
+        run: |
+          echo 'ADAM_GATE=ORCHBENCH'
+          echo 'LIVE_VENUE_WEB_SOCKET_TEST=NOT_VERIFIED_BY_CI'
+          echo 'GOOGLE_GENAI_INFERENCE=NOT_VERIFIED_BY_CI'
+          echo 'FINANCIAL_CUSTODY_AND_SETTLEMENT=NOT_VERIFIED'
+          echo 'LIVE_MONEY_EXECUTION=DISABLED'
