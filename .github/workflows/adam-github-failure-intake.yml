@@ -1,0 +1,33 @@
+name: ADAM GitHub Failure Intake
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 */6 * * *'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: adam-github-failure-intake
+  cancel-in-progress: false
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Ingest recent failed GitHub workflows
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/github-failure-intake.mjs
+      - name: Publish failure remedy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: adam-github-failures-${{ github.run_id }}
+          path: reports/adam/github-failure-pool.json
+          if-no-files-found: error
+          retention-days: 30
